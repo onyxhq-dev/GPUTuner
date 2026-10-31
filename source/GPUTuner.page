@@ -51,6 +51,10 @@ Status: <b><?=$up ? 'running' : 'stopped'?></b>&nbsp;
 <input type="submit" value="Apply">
 </form>
 
+<? $log = trim((string)@shell_exec("tail -n 30 /var/log/gputuner.log 2>/dev/null")); if ($log !== ''): ?>
+<details<?=$up ? '' : ' open'?>><summary>Log</summary><pre><?=htmlspecialchars($log)?></pre></details>
+<? endif; ?>
+
 <hr>
 <? if (!$up): ?>
 <p>The service is stopped. Start it to see and control your GPUs. Needs the NVIDIA Driver plugin.</p>
