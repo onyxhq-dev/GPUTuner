@@ -4,18 +4,15 @@ Icon="GPUTuner.png"
 ---
 <?
 $cfgf = "/boot/config/plugins/gputuner/gputuner.cfg";
-$c = array_merge(["SERVICE"=>"disable","DATA_DIR"=>"/mnt/user/appdata/gputuner"], @parse_ini_file($cfgf) ?: []);
+$c = array_merge(["SERVICE"=>"disable"], @parse_ini_file($cfgf) ?: []);
 $rc = "/usr/local/emhttp/plugins/GPUTuner/rc.gputuner";
 $msg = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['csrf_token'] ?? '') === $var['csrf_token']) {
   $a = $_POST['action'] ?? '';
   if ($a === 'save') {
     $c['SERVICE'] = ($_POST['SERVICE'] ?? '') === 'enable' ? 'enable' : 'disable';
-    $d = rtrim($_POST['DATA_DIR'] ?? '', '/');
-    $c['DATA_DIR'] = preg_match('#^/(mnt|boot)/[\w./-]+$#', $d) && strpos($d, '..') === false ? $d : $c['DATA_DIR'];
-    $out = ""; foreach ($c as $k => $v) $out .= "$k=\"$v\"\n";
-    file_put_contents($cfgf, $out);
-    $msg = "Saved. Restart the service to apply a new data directory.";
+    file_put_contents($cfgf, "SERVICE=\"{$c['SERVICE']}\"\n");
+    $msg = "Saved.";
   } elseif (in_array($a, ['start','stop','restart'])) {
     $msg = htmlspecialchars(shell_exec("$rc $a 2>&1"));
   }
@@ -50,7 +47,6 @@ Status: <b><?=$up ? 'running' : 'stopped'?></b>&nbsp;
 <input type="hidden" name="csrf_token" value="<?=$tok?>"><input type="hidden" name="action" value="save">
 <dl>
 <dt>Start with array:</dt><dd><select name="SERVICE"><option value="disable">No</option><option value="enable" <?=$c['SERVICE']=='enable'?'selected':''?>>Yes</option></select></dd>
-<dt>Data directory:</dt><dd><input name="DATA_DIR" value="<?=htmlspecialchars($c['DATA_DIR'])?>"></dd>
 </dl>
 <input type="submit" value="Apply">
 </form>

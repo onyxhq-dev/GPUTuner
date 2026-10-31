@@ -57,12 +57,12 @@ exit 0
 
 <FILE Name="&dir;/GPUTuner.page">
 <URL>&raw;/source/GPUTuner.page</URL>
-<SHA256>29c7af550a8052a3c646e50e8d7c1fc02896e29a6e53ceebe6708d70cd3afe79</SHA256>
+<SHA256>c515456abb846779891b929918d30e1d7fb24e276229492b14c0fcd0bdbfc4c6</SHA256>
 </FILE>
 
 <FILE Name="&dir;/supervisor.py">
 <URL>&raw;/source/supervisor.py</URL>
-<SHA256>eb2de27b830ce03ccab96090a67b2c1f0b90fb78eb7c3b2e4b5d1459cc8af13c</SHA256>
+<SHA256>bae1020a2304f2168ac32c25aef452dc7b15d6bb281c59d9ef73a942135ddc27</SHA256>
 </FILE>
 
 <FILE Name="&dir;/api.py">
@@ -106,12 +106,19 @@ tar xzf &boot;/python-&pyver;.tar.gz -C /usr/local/lib/gputuner \
 tar xzf &boot;/upstream-&upver;.tar.gz -C /usr/local/lib/gputuner --strip-components=1 \
   --wildcards '*/gpu_tuner' '*/gpu-tunerd'
 &py; -c "import zipfile;zipfile.ZipFile('&boot;/nvidia_ml_py-&mlver;.whl').extractall('/usr/local/lib/gputuner/vendor')"
+sed -i -e '/os\.chmod(tmp, 0o644)/d' -e '/os\.chmod(tmp, 0o600)/d' /usr/local/lib/gputuner/gpu_tuner/daemon.py
 chmod -R a+rX /usr/local/lib/gputuner
 
 sed -i 's/\r//' &dir;/supervisor.py &dir;/api.py &dir;/rc.gputuner &dir;/event/*
 chmod +x &dir;/supervisor.py &dir;/api.py &dir;/rc.gputuner &dir;/event/*
 
 [ -f &boot;/gputuner.cfg ] || printf 'SERVICE="disable"\n' &gt; &boot;/gputuner.cfg
+sed -i '/^DATA_DIR=/d' &boot;/gputuner.cfg
+
+OLD=/mnt/user/appdata/gputuner
+if [ -d $OLD/state ] &amp;&amp; [ ! -d &boot;/data ]; then
+  mkdir -p &boot;/data &amp;&amp; cp -r $OLD/config $OLD/state &boot;/data/
+fi
 
 grep -q '^SERVICE="enable"' &boot;/gputuner.cfg &amp;&amp; &dir;/rc.gputuner start || true
 
@@ -127,7 +134,7 @@ exit 0
 <INLINE>
 &dir;/rc.gputuner stop 2&gt;/dev/null
 rm -rf &dir; /usr/local/lib/gputuner
-rm -rf &boot;
+find &boot; -mindepth 1 -maxdepth 1 ! -name data -exec rm -rf {} +
 echo "GPUTuner removed."
 exit 0
 </INLINE>

@@ -43,7 +43,7 @@ Requires the **NVIDIA Driver** plugin (GPU visible in `nvidia-smi`). Python 3.12
 2. Set **Start with array** to `Yes`, click **Apply**, then **Start**
 3. The GPU panels appear below; change a value and click its **Apply** button
 
-State (saved settings, budget) lives in `/mnt/user/appdata/gputuner` by default.
+Saved settings and the power budget live on the flash drive in `/boot/config/plugins/gputuner/data` (two small JSON files).
 
 ## Notes
 
@@ -59,7 +59,7 @@ and bump `version` in `gputuner.plg` and `GPUTuner.xml`. To update upstream, cha
 
 ## Uninstall
 
-Go to **Plugins**, find GPUTuner, and click **Remove**. The data directory is kept.
+Go to **Plugins**, find GPUTuner, and click **Remove**. The `data` folder on the flash drive is kept so your settings survive a reinstall; delete `/boot/config/plugins/gputuner/data` for a clean slate.
 
 ## Requirements
 

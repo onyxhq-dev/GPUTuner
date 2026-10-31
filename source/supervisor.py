@@ -2,26 +2,14 @@
 # Plugin supervisor, adapted from 0sy/gpu-tuner-unraid container/entrypoint.py (MIT).
 import json, os, signal, subprocess, sys
 
-CFG = "/boot/config/plugins/gputuner/gputuner.cfg"
+DATA = "/boot/config/plugins/gputuner/data"
 ROOT = "/usr/local/lib/gputuner"
 RUN = "/run/gpu-tuner"
 SOCK = RUN + "/control.sock"
 
 
-def data_dir():
-    d = "/mnt/user/appdata/gputuner"
-    try:
-        for line in open(CFG):
-            k, _, v = line.strip().partition("=")
-            if k == "DATA_DIR":
-                d = v.strip().strip('"') or d
-    except OSError:
-        pass
-    return d
-
-
 def main():
-    d = data_dir()
+    d = DATA
     for sub in ("config", "state"):
         os.makedirs(f"{d}/{sub}", mode=0o700, exist_ok=True)
     conf = d + "/config/config.json"
