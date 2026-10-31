@@ -10,6 +10,9 @@
 <!ENTITY boot      "/boot/config/plugins/gputuner">
 <!ENTITY upver     "1.3.1-unraid.1-beta.1">
 <!ENTITY mlver     "13.615.71">
+<!ENTITY pyver     "3.12.16+20261026">
+<!ENTITY pysha     "ce4f6d0a6cfdb3bed6e44c2f9affd85943c76a42e25ad3a259002f31d6fb8a20">
+<!ENTITY py        "/usr/local/lib/gputuner/python/bin/python3">
 ]>
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12" icon="microchip" support="https://github.com/onyxhq-dev/GPUTuner">
 
@@ -39,6 +42,11 @@ exit 0
 <SHA256>231d84a2f0baef376ec9ea5a2cd4cb41e0944db2a6046bea38b2b9046164fdb2</SHA256>
 </FILE>
 
+<FILE Name="&boot;/python-&pyver;.tar.gz">
+<URL>https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.12.16%2B20261026-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz</URL>
+<SHA256>&pysha;</SHA256>
+</FILE>
+
 <FILE Name="&boot;/nvidia_ml_py-&mlver;.whl">
 <URL>https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-&mlver;-py3-none-any.whl</URL>
 <SHA256>959bf4adf6fe1308e4bd739e722236b0d1ec8392e2cefad33ff70c311380b9b6</SHA256>
@@ -46,7 +54,7 @@ exit 0
 
 <FILE Name="&dir;/GPUTuner.page">
 <URL>&raw;/source/GPUTuner.page</URL>
-<SHA256>d49ce6a49fbfece600f0b2eb4f1755cde23025f4d8d184ae430d922868e7d81e</SHA256>
+<SHA256>29c7af550a8052a3c646e50e8d7c1fc02896e29a6e53ceebe6708d70cd3afe79</SHA256>
 </FILE>
 
 <FILE Name="&dir;/supervisor.py">
@@ -61,12 +69,12 @@ exit 0
 
 <FILE Name="&dir;/api.php">
 <URL>&raw;/source/api.php</URL>
-<SHA256>8fc11ae398d0dcbed154694119890619f4ce87fa18954873ad901ed06940bff5</SHA256>
+<SHA256>1409db2585043e515a4bdeacf5551c4fd279d26dd8b71145c27af2a2734c237e</SHA256>
 </FILE>
 
 <FILE Name="&dir;/rc.gputuner">
 <URL>&raw;/source/rc.gputuner</URL>
-<SHA256>d8edc245ee5137577bba46e43145adfdd63268fa4b3de94cdae8c350d23a64ab</SHA256>
+<SHA256>725cd55f038e2045418e2395084160929676d89aef1cd28adfb210347ecd00d4</SHA256>
 </FILE>
 
 <FILE Name="&dir;/event/started">
@@ -87,13 +95,14 @@ exit 0
 <FILE Run="/bin/bash">
 <INLINE>
 set -e
-command -v python3 &gt;/dev/null || { echo "ERROR: python3 not found. Install a Python 3 plugin first."; exit 1; }
 command -v nvidia-smi &gt;/dev/null || echo "WARNING: nvidia-smi not found. Install the NVIDIA Driver plugin."
 
 mkdir -p /usr/local/lib/gputuner/vendor
+tar xzf &boot;/python-&pyver;.tar.gz -C /usr/local/lib/gputuner \
+  --exclude="*/test" --exclude="*/idlelib" --exclude="*/ensurepip" --exclude="*/tkinter" --exclude="*/turtledemo" --exclude="*/site-packages/pip*" --exclude="python/share"
 tar xzf &boot;/upstream-&upver;.tar.gz -C /usr/local/lib/gputuner --strip-components=1 \
   --wildcards '*/gpu_tuner' '*/gpu-tunerd'
-python3 -c "import zipfile;zipfile.ZipFile('&boot;/nvidia_ml_py-&mlver;.whl').extractall('/usr/local/lib/gputuner/vendor')"
+&py; -c "import zipfile;zipfile.ZipFile('&boot;/nvidia_ml_py-&mlver;.whl').extractall('/usr/local/lib/gputuner/vendor')"
 chmod -R a+rX /usr/local/lib/gputuner
 
 sed -i 's/\r//' &dir;/supervisor.py &dir;/api.py &dir;/rc.gputuner &dir;/event/*

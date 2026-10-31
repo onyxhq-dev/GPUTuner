@@ -57,7 +57,7 @@ Status: <b><?=$up ? 'running' : 'stopped'?></b>&nbsp;
 
 <hr>
 <? if (!$up): ?>
-<p>The service is stopped. Start it to see and control your GPUs. Needs the NVIDIA Driver plugin and Python 3.</p>
+<p>The service is stopped. Start it to see and control your GPUs. Needs the NVIDIA Driver plugin.</p>
 <? else: ?>
 <div id="gt-top"></div>
 <div id="gt-gpus"><p>Loading...</p></div>

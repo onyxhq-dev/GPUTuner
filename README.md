@@ -28,7 +28,7 @@ The daemon code is downloaded at install time (pinned and checksummed).
 
 ## Installation
 
-Requires the **NVIDIA Driver** plugin (GPU visible in `nvidia-smi`) and `python3` on the host.
+Requires the **NVIDIA Driver** plugin (GPU visible in `nvidia-smi`). Python 3.12 is bundled with the plugin, nothing else to install.
 
 1. In Unraid, go to **Plugins** and click **Install Plugin**
 2. Paste this URL and click **Install**:
@@ -63,7 +63,8 @@ Go to **Plugins**, find GPUTuner, and click **Remove**. The data directory is ke
 
 ## Requirements
 
-- Unraid 6.12 or later, NVIDIA Driver plugin, python3
+- Unraid 6.12 or later (x86_64), NVIDIA Driver plugin
+- About 35 MB of flash for the cached Python download, and about 90 MB of RAM for the unpacked copy (re-created on every boot)
 
 ## License
 

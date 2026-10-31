@@ -15,7 +15,7 @@ if ($op === 'apply') {
 } elseif ($op !== 'state') {
   echo '{"ok":false,"error":"bad op"}'; exit;
 }
-$p = proc_open(['python3', '/usr/local/emhttp/plugins/GPUTuner/api.py', $op], [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']], $pipes);
+$p = proc_open(['/usr/local/lib/gputuner/python/bin/python3', '/usr/local/emhttp/plugins/GPUTuner/api.py', $op], [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']], $pipes);
 if (!is_resource($p)) { echo '{"ok":false,"error":"cannot start python3"}'; exit; }
 fwrite($pipes[0], $stdin); fclose($pipes[0]);
 $out = stream_get_contents($pipes[1]); fclose($pipes[1]); fclose($pipes[2]); proc_close($p);
