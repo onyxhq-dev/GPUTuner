@@ -1,5 +1,4 @@
 #!/bin/bash
-# Re-stamp the <SHA256> of every repo file the .plg downloads. Run after editing anything in source/ or assets/.
 set -euo pipefail
 cd "$(dirname "$0")"
 for f in source/* assets/logo.png; do

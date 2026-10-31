@@ -19,7 +19,6 @@
 - Initial release. Native plugin (no Docker, no separate web UI or password) built on the gpu-tunerd daemon from 0sy/gpu-tuner-unraid &upver; (MIT, based on willboyden/gpu-tuner): live readings, power limit, fan curve/fixed speed, clock cap and combined power budget per card, all inside Settings > Utilities > GPU Tuner
 </CHANGES>
 
-<!-- Pre-install: clean slate for plugin files, keep user config + data. -->
 <FILE Run="/bin/bash">
 <INLINE>
 [ -x &dir;/rc.gputuner ] &amp;&amp; &dir;/rc.gputuner stop 2&gt;/dev/null
@@ -29,7 +28,6 @@ exit 0
 </INLINE>
 </FILE>
 
-<!-- Upstream code + NVML python binding: pinned, checksummed, cached on flash so boot works offline. -->
 <FILE Name="&boot;/upstream-&upver;.tar.gz">
 <URL>https://github.com/0sy/gpu-tuner-unraid/archive/refs/tags/&upver;.tar.gz</URL>
 <SHA256>231d84a2f0baef376ec9ea5a2cd4cb41e0944db2a6046bea38b2b9046164fdb2</SHA256>
@@ -42,37 +40,37 @@ exit 0
 
 <FILE Name="&dir;/GPUTuner.page">
 <URL>&raw;/source/GPUTuner.page</URL>
-<SHA256>d74db67d0f2f8d925fe1fc98deaeb422de0283cc229d74dbdf3f95379f34a7e2</SHA256>
+<SHA256>d49ce6a49fbfece600f0b2eb4f1755cde23025f4d8d184ae430d922868e7d81e</SHA256>
 </FILE>
 
 <FILE Name="&dir;/supervisor.py">
 <URL>&raw;/source/supervisor.py</URL>
-<SHA256>6a88e59102e5ea68a36a2fc33ae2c08de1a5cfa053aeeb7fb8d44f4256d55253</SHA256>
+<SHA256>eb2de27b830ce03ccab96090a67b2c1f0b90fb78eb7c3b2e4b5d1459cc8af13c</SHA256>
 </FILE>
 
 <FILE Name="&dir;/api.py">
 <URL>&raw;/source/api.py</URL>
-<SHA256>8e9e4fd47a01859bd9b5230fb49436643f9ea1e42ecf9e76ece9014be74066d3</SHA256>
+<SHA256>06836eb12f3987d329f81f8761b527c83e5c35f6026e444275f59cf3f1857f9d</SHA256>
 </FILE>
 
 <FILE Name="&dir;/api.php">
 <URL>&raw;/source/api.php</URL>
-<SHA256>e36d4f3fb2c9de1828bbad525a212a04f78898797c04fd4b2680a1d2788f3b7e</SHA256>
+<SHA256>8fc11ae398d0dcbed154694119890619f4ce87fa18954873ad901ed06940bff5</SHA256>
 </FILE>
 
 <FILE Name="&dir;/rc.gputuner">
 <URL>&raw;/source/rc.gputuner</URL>
-<SHA256>1ab70f0e22838353fac75761617c84e4f35646fe135fedd11a4e3c8c45eaed11</SHA256>
+<SHA256>d8edc245ee5137577bba46e43145adfdd63268fa4b3de94cdae8c350d23a64ab</SHA256>
 </FILE>
 
 <FILE Name="&dir;/event/started">
 <URL>&raw;/source/event-started</URL>
-<SHA256>f14ffbb2aa43007166556bba3fd4f10634c82b1e546b9ac0c154d2ac75ae3e7b</SHA256>
+<SHA256>ff41999df90555fb78f90c1a81a47e574dedf1381e3a619290e58975e0b0b9d3</SHA256>
 </FILE>
 
 <FILE Name="&dir;/event/stopping_svcs">
 <URL>&raw;/source/event-stopping_svcs</URL>
-<SHA256>f662022bc3b8ec04d132dc3fabe85e2a7110dd38d43b29d74d363a96f2c4156a</SHA256>
+<SHA256>b9b672295c871e15834bb0bac9e1119176b7a37ce911234ae180be6e13c83918</SHA256>
 </FILE>
 
 <FILE Name="&dir;/images/GPUTuner.png">
@@ -97,7 +95,6 @@ chmod +x &dir;/supervisor.py &dir;/api.py &dir;/rc.gputuner &dir;/event/*
 
 [ -f &boot;/gputuner.cfg ] || printf 'SERVICE="disable"\n' &gt; &boot;/gputuner.cfg
 
-# restart after a plugin update if the service is enabled
 grep -q '^SERVICE="enable"' &boot;/gputuner.cfg &amp;&amp; &dir;/rc.gputuner start || true
 
 echo "----------------------------------------------------"
@@ -113,7 +110,6 @@ exit 0
 &dir;/rc.gputuner stop 2&gt;/dev/null
 rm -rf &dir; /usr/local/lib/gputuner
 rm -rf &boot;
-# Data directory (saved GPU settings) is kept on purpose: /mnt/user/appdata/gputuner by default.
 echo "GPUTuner removed."
 exit 0
 </INLINE>

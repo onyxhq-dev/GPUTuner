@@ -97,13 +97,11 @@ function build(g){
   c.liveEls = {};
   for (const k of ['Temp','Fan','Power','Core','Util','VRAM','Limits']) { c.liveEls[k] = h('b'); c.live.append(h('span', {}, k, c.liveEls[k])); }
 
-  // power
   c.pIn = h('input', {type:'number', step:1, oninput: dirty('p')}); c.pPre = h('span');
   c.pMsg = h('span', {class:'gt-msg'});
   c.pBtn = h('button', {onclick: () => send(c,'p',{op:'set_power',uuid:g.uuid,watts:+c.pIn.value}, c.pMsg, 'Power limit applied.')}, 'Apply');
   c.pRow = h('div', {class:'gt-grp'}, h('label',{},'Power limit (W)'), c.pIn, c.pBtn, c.pPre, c.pMsg);
 
-  // fan
   c.fMode = h('select', {onchange: dirty('f')}, h('option',{value:'auto'},'Driver default'), h('option',{value:'curve'},'Curve'), h('option',{value:'manual'},'Fixed speed'));
   c.fCurve = h('select', {onchange: dirty('f')});
   c.fPct = h('input', {type:'number', step:1, max:100, oninput: dirty('f')});
@@ -115,7 +113,6 @@ function build(g){
   }}, 'Apply');
   c.fRow = h('div', {class:'gt-grp'}, h('label',{},'Fan'), c.fMode, c.fCurve, c.fPct, h('span',{},'%'), c.fBtn, c.fInfo, c.fMsg);
 
-  // clock cap
   c.cIn = h('input', {type:'number', step:15, oninput: dirty('c')}); c.cOff = h('input', {type:'checkbox', onchange: dirty('c')});
   c.cMsg = h('span', {class:'gt-msg'});
   c.cBtn = h('button', {onclick: () => send(c,'c',{op:'set_clock_cap',uuid:g.uuid,mhz:c.cOff.checked?null:+c.cIn.value}, c.cMsg, 'Clock cap applied.')}, 'Apply');
@@ -133,7 +130,6 @@ function fillStatic(c, st, all){
   const g = c.g;
   c.st = st; c.stAll = all;
   const locked = !!all.preview || st.settings.fan.mode === 'unmanaged';
-  // power
   c.pRow.hidden = !st.power_range;
   if (st.power_range) {
     c.pIn.min = st.power_range[0]; c.pIn.max = st.power_range[1];
@@ -142,7 +138,6 @@ function fillStatic(c, st, all){
       h('button', {title: p.note||'', onclick: () => { c.pIn.value = p.w; c.dirty.p = true; }}, p.label || (p.w + ' W'))));
     c.pPre.append(h('span',{class:'gt-msg'}, ` range ${st.power_range[0]}-${st.power_range[1]} W`));
   }
-  // fan
   c.fRow.hidden = !g.nfans;
   if (g.nfans) {
     const f = st.settings.fan, presets = all.curve_presets || {};
@@ -152,7 +147,6 @@ function fillStatic(c, st, all){
     c.fPct.min = st.fan_min;
     c.fInfo.textContent = st.fan && st.fan.floor_active ? 'safety floor active' : (st.fan && st.fan.fault ? 'fault: ' + st.fan.fault : '');
   }
-  // clock
   c.cRow.hidden = !st.clock_range;
   if (st.clock_range) {
     c.cIn.min = st.clock_range[0]; c.cIn.max = st.clock_range[1];
@@ -174,7 +168,7 @@ function fillLive(c, s){
   L.Limits.textContent = (s.reasons && s.reasons.length) ? s.reasons.join(', ') : 'none';
 }
 
-function applyStatus(st){   // a status from the daemon (poll or reply): refresh the controls
+function applyStatus(st){
   if (!st || !st.gpus) return;
   for (const g of st.gpus) if (cards[g.uuid]) fillStatic(cards[g.uuid], g, st);
   renderTop(st);
@@ -197,7 +191,7 @@ function renderTop(st, extraWarning){
   topEl.replaceChildren(...kids);
 }
 
-function notice(text, bad){      // replace the whole panel with a message; cards are rebuilt afterwards
+function notice(text, bad){
   for (const k in cards) delete cards[k];
   topEl = null; top.replaceChildren();
   box.replaceChildren(h('p', {class: bad ? 'gt-err' : ''}, text));
@@ -206,7 +200,7 @@ function notice(text, bad){      // replace the whole panel with a message; card
 function render(d){
   if (!d.ok) return notice(d.error || 'error', true);
   if (!d.static.length) return notice('No NVIDIA GPU found.');
-  if (box.querySelector('p')) box.replaceChildren();          // drop "Loading..." / earlier message
+  if (box.querySelector('p')) box.replaceChildren();
   const stat = {};
   for (const g of (d.status && d.status.gpus) || []) stat[g.uuid] = g;
   for (const g of d.static) {

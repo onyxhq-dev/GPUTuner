@@ -1,5 +1,4 @@
 #!/bin/bash
-# Array started: launch the service if enabled.
 [ "$(grep -s '^SERVICE=' /boot/config/plugins/gputuner/gputuner.cfg | cut -d= -f2 | tr -d '"')" = "enable" ] \
   && /usr/local/emhttp/plugins/GPUTuner/rc.gputuner start
 exit 0

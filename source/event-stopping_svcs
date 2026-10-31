@@ -1,4 +1,3 @@
 #!/bin/bash
-# Array stopping: shut down cleanly (restores driver fan control).
 /usr/local/emhttp/plugins/GPUTuner/rc.gputuner stop
 exit 0

@@ -12,7 +12,7 @@ start)
 stop)
   running || exit 0
   kill "$(cat $PID)"
-  for i in $(seq 40); do running || break; sleep 1; done  # supervisor restores fans before exit
+  for i in $(seq 40); do running || break; sleep 1; done
   rm -f $PID ;;
 restart) "$0" stop; "$0" start ;;
 status) running && echo running || { echo stopped; exit 1; } ;;

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 # Plugin supervisor, adapted from 0sy/gpu-tuner-unraid container/entrypoint.py (MIT).
-# Runs gpu-tunerd (root). The Unraid page talks to it through api.php/api.py, no separate web UI.
-# SIGTERM stops the daemon and hands fan control back to the driver.
 import json, os, signal, subprocess, sys
 
 CFG = "/boot/config/plugins/gputuner/gputuner.cfg"
@@ -27,7 +25,7 @@ def main():
     for sub in ("config", "state"):
         os.makedirs(f"{d}/{sub}", mode=0o700, exist_ok=True)
     conf = d + "/config/config.json"
-    if not os.path.exists(conf):  # allowed_uid null: root-only socket, which is all the page needs
+    if not os.path.exists(conf):
         with open(conf, "w") as f:
             json.dump({"allowed_uid": None, "gpu_budget_w": None, "interval_s": 2.0}, f, indent=2)
     os.makedirs(RUN, exist_ok=True)

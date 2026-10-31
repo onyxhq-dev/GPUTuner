@@ -1,5 +1,4 @@
 <?php
-// Endpoint for the GPUTuner page: POST op=state | op=apply&req=<json>. Shells out to api.py (root).
 header('Content-Type: application/json');
 $var = @parse_ini_file('/var/local/emhttp/var.ini') ?: [];
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !hash_equals((string)($var['csrf_token'] ?? ''), (string)($_POST['csrf_token'] ?? ''))) {
