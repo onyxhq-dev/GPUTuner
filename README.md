@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">GPUTuner</h1>
-<p align="center">NVIDIA GPU power, fan and clock control for Unraid - as a plugin, no Docker.</p>
+<p align="center">NVIDIA GPU power, fan and clock control inside the Unraid web UI - as a plugin, no Docker.</p>
 
 <p align="center">
   <img src="https://img.shields.io/github/license/onyxhq-dev/GPUTuner?color=8892bf" alt="License">
@@ -11,18 +11,20 @@
   <img src="https://img.shields.io/github/last-commit/onyxhq-dev/GPUTuner" alt="Last commit">
 </p>
 
-GPUTuner is the plugin version of [0sy/gpu-tuner-unraid](https://github.com/0sy/gpu-tuner-unraid) (MIT), which
-packages [willboyden/gpu-tuner](https://github.com/willboyden/gpu-tuner) as a container. The plugin downloads that
-code (pinned and checksummed) at install time and adds an Unraid settings page and service management.
+GPUTuner is a native Unraid plugin built on the `gpu-tunerd` daemon from [0sy/gpu-tuner-unraid](https://github.com/0sy/gpu-tuner-unraid) (MIT),
+which packages [willboyden/gpu-tuner](https://github.com/willboyden/gpu-tuner) as a container. Unlike the container there is **no separate web UI,
+port or password**: everything lives on one page inside the Unraid web UI (Settings > Utilities > GPU Tuner).
+The daemon code is downloaded at install time (pinned and checksummed).
 
 ## Features
 
-- **Power limit** per card, within the card's own NVML range, with an optional combined GPU power budget
-- **Fan control** - curve, fixed speed or driver default, always above a temperature-based safety floor
+- **Live readings** per card: temperature, fan, power, clocks, utilization, VRAM, throttle reasons
+- **Power limit** within the card's own NVML range, with presets where a profile exists, plus an optional combined GPU power budget
+- **Fan control** - driver default, fixed speed or a curve preset, always above a temperature-based safety floor
 - **Core clock cap** to run cooler and quieter
-- **Live monitoring** - temps, fan, power, clocks, utilization, VRAM, 6 hours of charts
-- **Start with array**, start/stop/restart from the Unraid settings page
-- Stopping the service (or the array) hands fan control back to the NVIDIA driver; power caps stay applied
+- **Reset to defaults** per card
+- **Start with array**, start/stop/restart from the same page
+- Every change is validated by the root daemon, not the page. Stopping the service (or the array) hands fan control back to the NVIDIA driver; power caps stay applied
 
 ## Installation
 
@@ -37,19 +39,18 @@ Requires the **NVIDIA Driver** plugin (GPU visible in `nvidia-smi`) and `python3
 
 ## Usage
 
-1. Go to **Settings > Utilities > GPUTuner**
-2. Set a **WebUI password** (12+ characters) - the service will not start without one
-3. Set **Start with array** to `Yes` and click **Apply**, then **Start**
-4. Click **Open GPU Tuner** (default port 8765)
+1. Go to **Settings > Utilities > GPU Tuner**
+2. Set **Start with array** to `Yes`, click **Apply**, then **Start**
+3. The GPU panels appear below; change a value and click its **Apply** button
 
-Data (state, password hash) lives in `/mnt/user/appdata/gputuner` by default.
+State (saved settings, budget) lives in `/mnt/user/appdata/gputuner` by default.
 
 ## Notes
 
-- The daemon runs as root (NVML writes need it); the web UI runs as `nobody`. The UI is plain HTTP, for a trusted LAN only.
+- The daemon runs as root (NVML writes need it). The page reaches it only through Unraid's own authenticated webGUI (CSRF-checked) over a root-only socket. Nothing listens on the network.
 - GPUs passed through to a VM are not available. Only one tuner should manage the same cards.
-- Do not reuse the Docker container's appdata folder (it uses uid 10001; the plugin uses `nobody`).
-- Forgot the password: set a new one on the settings page.
+- Some GPU models are monitor-only (no fan or clock controls); the page locks those controls.
+- Do not run this together with the Docker container version.
 
 ## Development
 

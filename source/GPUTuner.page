@@ -4,40 +4,43 @@ Icon="GPUTuner.png"
 ---
 <?
 $cfgf = "/boot/config/plugins/gputuner/gputuner.cfg";
-$c = array_merge(["SERVICE"=>"disable","DATA_DIR"=>"/mnt/user/appdata/gpu-tuner","PORT"=>"8765","LAN_IP"=>""],
-                 @parse_ini_file($cfgf) ?: []);
+$c = array_merge(["SERVICE"=>"disable","DATA_DIR"=>"/mnt/user/appdata/gputuner"], @parse_ini_file($cfgf) ?: []);
 $rc = "/usr/local/emhttp/plugins/GPUTuner/rc.gputuner";
-$sup = "/usr/local/emhttp/plugins/GPUTuner/supervisor.py";
 $msg = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['csrf_token'] ?? '') === $var['csrf_token']) {
   $a = $_POST['action'] ?? '';
   if ($a === 'save') {
-    $c['SERVICE']  = ($_POST['SERVICE'] ?? '') === 'enable' ? 'enable' : 'disable';
-    $c['PORT']     = (string)max(1024, min(65535, (int)$_POST['PORT']));
-    $c['LAN_IP']   = filter_var($_POST['LAN_IP'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) ?: '';
-    $d = rtrim($_POST['DATA_DIR'], '/');
+    $c['SERVICE'] = ($_POST['SERVICE'] ?? '') === 'enable' ? 'enable' : 'disable';
+    $d = rtrim($_POST['DATA_DIR'] ?? '', '/');
     $c['DATA_DIR'] = preg_match('#^/(mnt|boot)/[\w./-]+$#', $d) && strpos($d, '..') === false ? $d : $c['DATA_DIR'];
     $out = ""; foreach ($c as $k => $v) $out .= "$k=\"$v\"\n";
     file_put_contents($cfgf, $out);
-    $msg = "Saved. Restart the service to apply.";
+    $msg = "Saved. Restart the service to apply a new data directory.";
   } elseif (in_array($a, ['start','stop','restart'])) {
     $msg = htmlspecialchars(shell_exec("$rc $a 2>&1"));
-  } elseif ($a === 'password') {
-    $p = popen("python3 $sup --set-password 2>&1", "w");
-    fwrite($p, $_POST['password']); pclose($p);
-    $msg = "Password update attempted (12-1024 chars required); try signing in.";
   }
 }
 exec("$rc status", $o, $st); $up = ($st === 0);
-$ip = $c['LAN_IP'] ?: explode(' ', trim(shell_exec("ip -4 route get 1.1.1.1 | sed -n 's/.* src \\([0-9.]*\\).*/\\1/p'")))[0];
 $tok = htmlspecialchars($var['csrf_token']);
 ?>
-<? if ($msg): ?><p><b><?=$msg?></b></p><? endif; ?>
-<p>Status: <b><?=$up ? 'running' : 'stopped'?></b>
-<? if ($up): ?> - <a href="http://<?=htmlspecialchars($ip)?>:<?=(int)$c['PORT']?>" target="_blank">Open GPU Tuner</a><? endif; ?></p>
+<style>
+.gt-card{border:1px solid rgba(128,128,128,.4);border-radius:6px;padding:12px 16px;margin:12px 0}
+.gt-card h3{margin:0 0 6px}
+.gt-live{display:flex;flex-wrap:wrap;gap:6px 22px;margin:6px 0 10px}
+.gt-live span b{display:block;font-size:1.3em}
+.gt-grp{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}
+.gt-grp label{min-width:110px;font-weight:bold}
+.gt-grp input[type=number]{width:90px}
+.gt-msg{opacity:.8;font-size:.9em}
+.gt-err{color:#e22}
+.gt-warn{border-left:4px solid #e90;padding:4px 10px;margin:8px 0}
+</style>
 
-<form method="post">
+<? if ($msg): ?><p><b><?=$msg?></b></p><? endif; ?>
+
+<form method="post" style="display:inline">
 <input type="hidden" name="csrf_token" value="<?=$tok?>">
+Status: <b><?=$up ? 'running' : 'stopped'?></b>&nbsp;
 <? foreach (['start','stop','restart'] as $b): ?>
 <button name="action" value="<?=$b?>"><?=ucfirst($b)?></button>
 <? endforeach; ?>
@@ -48,16 +51,180 @@ $tok = htmlspecialchars($var['csrf_token']);
 <dl>
 <dt>Start with array:</dt><dd><select name="SERVICE"><option value="disable">No</option><option value="enable" <?=$c['SERVICE']=='enable'?'selected':''?>>Yes</option></select></dd>
 <dt>Data directory:</dt><dd><input name="DATA_DIR" value="<?=htmlspecialchars($c['DATA_DIR'])?>"></dd>
-<dt>Port:</dt><dd><input name="PORT" value="<?=htmlspecialchars($c['PORT'])?>"></dd>
-<dt>Server IPv4 (blank = auto):</dt><dd><input name="LAN_IP" value="<?=htmlspecialchars($c['LAN_IP'])?>"></dd>
 </dl>
 <input type="submit" value="Apply">
 </form>
 
-<form method="post">
-<input type="hidden" name="csrf_token" value="<?=$tok?>"><input type="hidden" name="action" value="password">
-<dl><dt>WebUI password (12+ chars, required before first start):</dt><dd><input type="password" name="password" autocomplete="new-password"></dd></dl>
-<input type="submit" value="Set password">
-</form>
+<hr>
+<? if (!$up): ?>
+<p>The service is stopped. Start it to see and control your GPUs. Needs the NVIDIA Driver plugin and Python 3.</p>
+<? else: ?>
+<div id="gt-top"></div>
+<div id="gt-gpus"><p>Loading...</p></div>
+<p class="gt-msg">Changes act on the real GPU and are checked by the root daemon (power range, power budget, fan safety floor). Stopping the service hands fans back to the driver; power caps stay applied.</p>
 
-<p>Controls change real GPU settings and the UI is HTTP, intended for a trusted LAN. Needs the NVIDIA Driver plugin and Python 3.</p>
+<script>
+(function(){
+const CSRF = <?=json_encode($var['csrf_token'])?>, API = '/plugins/GPUTuner/api.php';
+const cards = {}, top = document.getElementById('gt-top'), box = document.getElementById('gt-gpus');
+let topEl = null;
+
+function h(tag, attrs, ...kids){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})) { if (k==='class') e.className=v; else if (k.startsWith('on')) e[k]=v; else e.setAttribute(k,v); }
+  for (const k of kids) e.append(k);
+  return e;
+}
+const call = body => $.post(API, Object.assign({csrf_token: CSRF}, body), null, 'json');
+const num = (v, d=0) => (v==null || isNaN(v)) ? '-' : (+v).toFixed(d);
+
+function say(el, text, bad){ el.textContent = text; el.className = 'gt-msg' + (bad ? ' gt-err' : ''); }
+
+function send(card, group, req, msgEl, okText){
+  say(msgEl, 'Applying...');
+  call({op:'apply', req: JSON.stringify(req)}).done(r => {
+    if (r.ok) { card.dirty[group] = false; say(msgEl, okText); applyStatus(r); }
+    else if (r.over_budget && req.op==='set_power' && !req.confirm_override &&
+             confirm((r.error||'Over the power budget.') + '\n\nApply anyway?')) send(card, group, {...req, confirm_override:true}, msgEl, okText);
+    else say(msgEl, r.error || 'Failed', true);
+  }).fail(() => say(msgEl, 'Request failed', true));
+}
+
+function build(g){
+  const c = {dirty:{}, uuid:g.uuid, g};
+  const dirty = grp => () => { c.dirty[grp] = true; };
+  c.title = h('h3'); c.live = h('div', {class:'gt-live'});
+  c.liveEls = {};
+  for (const k of ['Temp','Fan','Power','Core','Util','VRAM','Limits']) { c.liveEls[k] = h('b'); c.live.append(h('span', {}, k, c.liveEls[k])); }
+
+  // power
+  c.pIn = h('input', {type:'number', step:1, oninput: dirty('p')}); c.pPre = h('span');
+  c.pMsg = h('span', {class:'gt-msg'});
+  c.pBtn = h('button', {onclick: () => send(c,'p',{op:'set_power',uuid:g.uuid,watts:+c.pIn.value}, c.pMsg, 'Power limit applied.')}, 'Apply');
+  c.pRow = h('div', {class:'gt-grp'}, h('label',{},'Power limit (W)'), c.pIn, c.pBtn, c.pPre, c.pMsg);
+
+  // fan
+  c.fMode = h('select', {onchange: dirty('f')}, h('option',{value:'auto'},'Driver default'), h('option',{value:'curve'},'Curve'), h('option',{value:'manual'},'Fixed speed'));
+  c.fCurve = h('select', {onchange: dirty('f')});
+  c.fPct = h('input', {type:'number', step:1, max:100, oninput: dirty('f')});
+  c.fMsg = h('span', {class:'gt-msg'}); c.fInfo = h('span', {class:'gt-msg'});
+  c.fBtn = h('button', {onclick: () => {
+    const st = c.st.settings.fan, presets = c.stAll.curve_presets || {};
+    const curve = presets[c.fCurve.value] ? presets[c.fCurve.value].curve : st.curve;
+    send(c,'f',{op:'set_fan',uuid:g.uuid,mode:c.fMode.value,curve,manual_pct:+c.fPct.value||st.manual_pct}, c.fMsg, 'Fan setting applied.');
+  }}, 'Apply');
+  c.fRow = h('div', {class:'gt-grp'}, h('label',{},'Fan'), c.fMode, c.fCurve, c.fPct, h('span',{},'%'), c.fBtn, c.fInfo, c.fMsg);
+
+  // clock cap
+  c.cIn = h('input', {type:'number', step:15, oninput: dirty('c')}); c.cOff = h('input', {type:'checkbox', onchange: dirty('c')});
+  c.cMsg = h('span', {class:'gt-msg'});
+  c.cBtn = h('button', {onclick: () => send(c,'c',{op:'set_clock_cap',uuid:g.uuid,mhz:c.cOff.checked?null:+c.cIn.value}, c.cMsg, 'Clock cap applied.')}, 'Apply');
+  c.cRow = h('div', {class:'gt-grp'}, h('label',{},'Core clock cap (MHz)'), c.cIn, h('label',{style:'min-width:0;font-weight:normal'}, c.cOff, ' no cap'), c.cBtn, c.cMsg);
+
+  c.rMsg = h('span', {class:'gt-msg'});
+  c.rBtn = h('button', {onclick: () => { if (confirm('Reset fan curve, clock cap and power limit to safe defaults?')) send(c,'r',{op:'baseline',uuid:g.uuid}, c.rMsg, 'Reset to defaults.'); }}, 'Reset to defaults');
+  c.rRow = h('div', {class:'gt-grp'}, c.rBtn, c.rMsg);
+
+  c.el = h('div', {class:'gt-card'}, c.title, c.live, c.pRow, c.fRow, c.cRow, c.rRow);
+  return c;
+}
+
+function fillStatic(c, st, all){
+  const g = c.g;
+  c.st = st; c.stAll = all;
+  const locked = !!all.preview || st.settings.fan.mode === 'unmanaged';
+  // power
+  c.pRow.hidden = !st.power_range;
+  if (st.power_range) {
+    c.pIn.min = st.power_range[0]; c.pIn.max = st.power_range[1];
+    if (!c.dirty.p && st.settings.power_w != null) c.pIn.value = st.settings.power_w;
+    c.pPre.replaceChildren(...((st.profile && st.profile.power_presets) || []).map(p =>
+      h('button', {title: p.note||'', onclick: () => { c.pIn.value = p.w; c.dirty.p = true; }}, p.label || (p.w + ' W'))));
+    c.pPre.append(h('span',{class:'gt-msg'}, ` range ${st.power_range[0]}-${st.power_range[1]} W`));
+  }
+  // fan
+  c.fRow.hidden = !g.nfans;
+  if (g.nfans) {
+    const f = st.settings.fan, presets = all.curve_presets || {};
+    c.fCurve.replaceChildren(h('option',{value:''},'Current curve'), ...Object.entries(presets)
+      .filter(([,p]) => p.curve[p.curve.length-1][0] <= st.full_by_c).map(([k,p]) => h('option',{value:k,title:p.note||''}, p.label)));
+    if (!c.dirty.f) { c.fMode.value = f.mode === 'unmanaged' ? 'auto' : f.mode; c.fPct.value = f.manual_pct; }
+    c.fPct.min = st.fan_min;
+    c.fInfo.textContent = st.fan && st.fan.floor_active ? 'safety floor active' : (st.fan && st.fan.fault ? 'fault: ' + st.fan.fault : '');
+  }
+  // clock
+  c.cRow.hidden = !st.clock_range;
+  if (st.clock_range) {
+    c.cIn.min = st.clock_range[0]; c.cIn.max = st.clock_range[1];
+    if (!c.dirty.c) { c.cOff.checked = st.settings.clock_cap_mhz == null; c.cIn.value = st.settings.clock_cap_mhz ?? st.clock_range[1]; }
+  }
+  c.rRow.hidden = locked;
+  for (const el of c.el.querySelectorAll('button,input,select')) el.disabled = locked;
+}
+
+function fillLive(c, s){
+  s = s || {};
+  const fans = (s.fans || []).filter(x => x != null), L = c.liveEls;
+  L.Temp.textContent = num(s.temp) + ' °C';
+  L.Fan.textContent = fans.length ? num(Math.max(...fans)) + ' %' : '-';
+  L.Power.textContent = num(s.power_w) + ' / ' + num(s.power_limit_w) + ' W';
+  L.Core.textContent = num(s.clock_mhz) + ' MHz';
+  L.Util.textContent = num(s.util) + ' %';
+  L.VRAM.textContent = num(s.vram_used_mib) + ' / ' + num(s.vram_total_mib) + ' MiB';
+  L.Limits.textContent = (s.reasons && s.reasons.length) ? s.reasons.join(', ') : 'none';
+}
+
+function applyStatus(st){   // a status from the daemon (poll or reply): refresh the controls
+  if (!st || !st.gpus) return;
+  for (const g of st.gpus) if (cards[g.uuid]) fillStatic(cards[g.uuid], g, st);
+  renderTop(st);
+}
+
+function renderTop(st, extraWarning){
+  if (!topEl) { topEl = h('div'); top.append(topEl); }
+  const kids = [];
+  for (const w of [...(st.warnings || []), ...(extraWarning ? [extraWarning] : [])]) kids.push(h('div', {class:'gt-warn'}, w));
+  if (st.preview) kids.push(h('div', {class:'gt-warn'}, 'Monitor only: the control daemon is not reachable, controls are locked.'));
+  else if (st.power_settable) {
+    const inp = h('input', {type:'number', step:1, value: st.budget_w ?? '', placeholder:'none'}), msg = h('span', {class:'gt-msg'});
+    const btn = h('button', {onclick: () => {
+      say(msg, 'Applying...');
+      call({op:'apply', req: JSON.stringify({op:'set_budget', watts:+inp.value})}).done(r => r.ok ? (say(msg,'Budget applied.'), applyStatus(r)) : say(msg, r.error||'Failed', true));
+    }}, 'Apply');
+    kids.push(h('div', {class:'gt-grp'}, h('label',{},'Combined power budget (W)'), inp, btn,
+      h('span',{class:'gt-msg'}, `in use: ${st.budget_used_w ?? '-'} W`), msg));
+  }
+  topEl.replaceChildren(...kids);
+}
+
+function notice(text, bad){      // replace the whole panel with a message; cards are rebuilt afterwards
+  for (const k in cards) delete cards[k];
+  topEl = null; top.replaceChildren();
+  box.replaceChildren(h('p', {class: bad ? 'gt-err' : ''}, text));
+}
+
+function render(d){
+  if (!d.ok) return notice(d.error || 'error', true);
+  if (!d.static.length) return notice('No NVIDIA GPU found.');
+  if (box.querySelector('p')) box.replaceChildren();          // drop "Loading..." / earlier message
+  const stat = {};
+  for (const g of (d.status && d.status.gpus) || []) stat[g.uuid] = g;
+  for (const g of d.static) {
+    let c = cards[g.uuid];
+    if (!c) { c = cards[g.uuid] = build(g); box.append(c.el); }
+    c.g = g;
+    c.title.textContent = `GPU ${g.index}: ${g.name}`;
+    fillLive(c, d.live[g.uuid]);
+    if (stat[g.uuid]) fillStatic(c, stat[g.uuid], d.status);
+  }
+  renderTop(d.status || {}, d.daemon_error ? 'Control daemon: ' + d.daemon_error : null);
+}
+
+function poll(){
+  if (document.hidden) return setTimeout(poll, 3000);
+  call({op:'state'}).done(render).fail(() => notice('Request failed', true)).always(() => setTimeout(poll, 3000));
+}
+poll();
+})();
+</script>
+<? endif; ?>

@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "GPUTuner">
 <!ENTITY author    "onyxhq-dev">
-<!ENTITY version   "2026.10.31a">
+<!ENTITY version   "2026.11.01a">
 <!ENTITY launch    "Settings/GPUTuner">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master/gputuner.plg">
 <!ENTITY raw       "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master">
@@ -15,8 +15,8 @@
 
 <CHANGES>
 ## GPUTuner - NVIDIA GPU power, fan and clock control for Unraid
-## 2026.10.31a
-- Initial release. Native plugin (no Docker) version of 0sy/gpu-tuner-unraid &upver; (MIT, based on willboyden/gpu-tuner): power limit, fan curve and clock cap per card with a web UI, managed from Settings > Utilities > GPUTuner
+## 2026.11.01a
+- Initial release. Native plugin (no Docker, no separate web UI or password) built on the gpu-tunerd daemon from 0sy/gpu-tuner-unraid &upver; (MIT, based on willboyden/gpu-tuner): live readings, power limit, fan curve/fixed speed, clock cap and combined power budget per card, all inside Settings > Utilities > GPU Tuner
 </CHANGES>
 
 <!-- Pre-install: clean slate for plugin files, keep user config + data. -->
@@ -42,12 +42,22 @@ exit 0
 
 <FILE Name="&dir;/GPUTuner.page">
 <URL>&raw;/source/GPUTuner.page</URL>
-<SHA256>ccf515c07426ba7a40e5119a545329d061907c28768fca6bb3a734febccc7774</SHA256>
+<SHA256>d74db67d0f2f8d925fe1fc98deaeb422de0283cc229d74dbdf3f95379f34a7e2</SHA256>
 </FILE>
 
 <FILE Name="&dir;/supervisor.py">
 <URL>&raw;/source/supervisor.py</URL>
-<SHA256>9f10432836db8f349fc7ffd9a1f43ea39ccfd40fb5cc467dee70117475dbc3d2</SHA256>
+<SHA256>6a88e59102e5ea68a36a2fc33ae2c08de1a5cfa053aeeb7fb8d44f4256d55253</SHA256>
+</FILE>
+
+<FILE Name="&dir;/api.py">
+<URL>&raw;/source/api.py</URL>
+<SHA256>8e9e4fd47a01859bd9b5230fb49436643f9ea1e42ecf9e76ece9014be74066d3</SHA256>
+</FILE>
+
+<FILE Name="&dir;/api.php">
+<URL>&raw;/source/api.php</URL>
+<SHA256>e36d4f3fb2c9de1828bbad525a212a04f78898797c04fd4b2680a1d2788f3b7e</SHA256>
 </FILE>
 
 <FILE Name="&dir;/rc.gputuner">
@@ -78,12 +88,12 @@ command -v nvidia-smi &gt;/dev/null || echo "WARNING: nvidia-smi not found. Inst
 
 mkdir -p /usr/local/lib/gputuner/vendor
 tar xzf &boot;/upstream-&upver;.tar.gz -C /usr/local/lib/gputuner --strip-components=1 \
-  --wildcards '*/gpu_tuner' '*/web' '*/gpu-tuner' '*/gpu-tunerd'
+  --wildcards '*/gpu_tuner' '*/gpu-tunerd'
 python3 -c "import zipfile;zipfile.ZipFile('&boot;/nvidia_ml_py-&mlver;.whl').extractall('/usr/local/lib/gputuner/vendor')"
 chmod -R a+rX /usr/local/lib/gputuner
 
-sed -i 's/\r//' &dir;/supervisor.py &dir;/rc.gputuner &dir;/event/*
-chmod +x &dir;/supervisor.py &dir;/rc.gputuner &dir;/event/*
+sed -i 's/\r//' &dir;/supervisor.py &dir;/api.py &dir;/rc.gputuner &dir;/event/*
+chmod +x &dir;/supervisor.py &dir;/api.py &dir;/rc.gputuner &dir;/event/*
 
 [ -f &boot;/gputuner.cfg ] || printf 'SERVICE="disable"\n' &gt; &boot;/gputuner.cfg
 
@@ -92,7 +102,7 @@ grep -q '^SERVICE="enable"' &boot;/gputuner.cfg &amp;&amp; &dir;/rc.gputuner sta
 
 echo "----------------------------------------------------"
 echo " GPUTuner installed successfully."
-echo " Go to Settings &gt; Utilities &gt; GPUTuner, set a password, then start it."
+echo " Go to Settings &gt; Utilities &gt; GPU Tuner and start the service."
 echo "----------------------------------------------------"
 exit 0
 </INLINE>
@@ -103,7 +113,7 @@ exit 0
 &dir;/rc.gputuner stop 2&gt;/dev/null
 rm -rf &dir; /usr/local/lib/gputuner
 rm -rf &boot;
-# Data directory (state, password hash) is kept on purpose: /mnt/user/appdata/gputuner by default.
+# Data directory (saved GPU settings) is kept on purpose: /mnt/user/appdata/gputuner by default.
 echo "GPUTuner removed."
 exit 0
 </INLINE>
