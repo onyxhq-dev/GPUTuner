@@ -1,0 +1,20 @@
+#!/bin/bash
+PID=/var/run/gputuner.pid
+LOG=/var/log/gputuner.log
+S=/usr/local/emhttp/plugins/GPUTuner/supervisor.py
+running() { [ -f $PID ] && kill -0 "$(cat $PID)" 2>/dev/null; }
+case "$1" in
+start)
+  running && { echo "already running"; exit 0; }
+  nohup python3 $S >>$LOG 2>&1 &
+  echo $! >$PID; sleep 2
+  running || { echo "failed, see $LOG"; tail -n 3 $LOG; rm -f $PID; exit 1; } ;;
+stop)
+  running || exit 0
+  kill "$(cat $PID)"
+  for i in $(seq 40); do running || break; sleep 1; done  # supervisor restores fans before exit
+  rm -f $PID ;;
+restart) "$0" stop; "$0" start ;;
+status) running && echo running || { echo stopped; exit 1; } ;;
+*) echo "usage: $0 start|stop|restart|status"; exit 2 ;;
+esac

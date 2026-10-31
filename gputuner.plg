@@ -1,0 +1,112 @@
+<?xml version='1.0' standalone='yes'?>
+<!DOCTYPE PLUGIN [
+<!ENTITY name      "GPUTuner">
+<!ENTITY author    "onyxhq-dev">
+<!ENTITY version   "2026.10.31a">
+<!ENTITY launch    "Settings/GPUTuner">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master/gputuner.plg">
+<!ENTITY raw       "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master">
+<!ENTITY dir       "/usr/local/emhttp/plugins/GPUTuner">
+<!ENTITY boot      "/boot/config/plugins/gputuner">
+<!ENTITY upver     "1.3.1-unraid.1-beta.1">
+<!ENTITY mlver     "13.615.71">
+]>
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12" icon="microchip" support="https://github.com/onyxhq-dev/GPUTuner">
+
+<CHANGES>
+## GPUTuner - NVIDIA GPU power, fan and clock control for Unraid
+## 2026.10.31a
+- Initial release. Native plugin (no Docker) version of 0sy/gpu-tuner-unraid &upver; (MIT, based on willboyden/gpu-tuner): power limit, fan curve and clock cap per card with a web UI, managed from Settings > Utilities > GPUTuner
+</CHANGES>
+
+<!-- Pre-install: clean slate for plugin files, keep user config + data. -->
+<FILE Run="/bin/bash">
+<INLINE>
+[ -x &dir;/rc.gputuner ] &amp;&amp; &dir;/rc.gputuner stop 2&gt;/dev/null
+rm -rf &dir; /usr/local/lib/gputuner
+mkdir -p &dir;/event &dir;/images &boot;
+exit 0
+</INLINE>
+</FILE>
+
+<!-- Upstream code + NVML python binding: pinned, checksummed, cached on flash so boot works offline. -->
+<FILE Name="&boot;/upstream-&upver;.tar.gz">
+<URL>https://github.com/0sy/gpu-tuner-unraid/archive/refs/tags/&upver;.tar.gz</URL>
+<SHA256>231d84a2f0baef376ec9ea5a2cd4cb41e0944db2a6046bea38b2b9046164fdb2</SHA256>
+</FILE>
+
+<FILE Name="&boot;/nvidia_ml_py-&mlver;.whl">
+<URL>https://files.pythonhosted.org/packages/53/a1/1681dfa1c904d4e3e72e51b55a0ff012d50b766843ef832d584abe2113c6/nvidia_ml_py-&mlver;-py3-none-any.whl</URL>
+<SHA256>959bf4adf6fe1308e4bd739e722236b0d1ec8392e2cefad33ff70c311380b9b6</SHA256>
+</FILE>
+
+<FILE Name="&dir;/GPUTuner.page">
+<URL>&raw;/source/GPUTuner.page</URL>
+<SHA256>ccf515c07426ba7a40e5119a545329d061907c28768fca6bb3a734febccc7774</SHA256>
+</FILE>
+
+<FILE Name="&dir;/supervisor.py">
+<URL>&raw;/source/supervisor.py</URL>
+<SHA256>9f10432836db8f349fc7ffd9a1f43ea39ccfd40fb5cc467dee70117475dbc3d2</SHA256>
+</FILE>
+
+<FILE Name="&dir;/rc.gputuner">
+<URL>&raw;/source/rc.gputuner</URL>
+<SHA256>1ab70f0e22838353fac75761617c84e4f35646fe135fedd11a4e3c8c45eaed11</SHA256>
+</FILE>
+
+<FILE Name="&dir;/event/started">
+<URL>&raw;/source/event-started</URL>
+<SHA256>f14ffbb2aa43007166556bba3fd4f10634c82b1e546b9ac0c154d2ac75ae3e7b</SHA256>
+</FILE>
+
+<FILE Name="&dir;/event/stopping_svcs">
+<URL>&raw;/source/event-stopping_svcs</URL>
+<SHA256>f662022bc3b8ec04d132dc3fabe85e2a7110dd38d43b29d74d363a96f2c4156a</SHA256>
+</FILE>
+
+<FILE Name="&dir;/images/GPUTuner.png">
+<URL>&raw;/assets/logo.png</URL>
+<SHA256>3987e83cc54b52a317a400cef186401f3a17ff54137e4b501b6e211e2c15aa57</SHA256>
+</FILE>
+
+<FILE Run="/bin/bash">
+<INLINE>
+set -e
+command -v python3 &gt;/dev/null || { echo "ERROR: python3 not found. Install a Python 3 plugin first."; exit 1; }
+command -v nvidia-smi &gt;/dev/null || echo "WARNING: nvidia-smi not found. Install the NVIDIA Driver plugin."
+
+mkdir -p /usr/local/lib/gputuner/vendor
+tar xzf &boot;/upstream-&upver;.tar.gz -C /usr/local/lib/gputuner --strip-components=1 \
+  --wildcards '*/gpu_tuner' '*/web' '*/gpu-tuner' '*/gpu-tunerd'
+python3 -c "import zipfile;zipfile.ZipFile('&boot;/nvidia_ml_py-&mlver;.whl').extractall('/usr/local/lib/gputuner/vendor')"
+chmod -R a+rX /usr/local/lib/gputuner
+
+sed -i 's/\r//' &dir;/supervisor.py &dir;/rc.gputuner &dir;/event/*
+chmod +x &dir;/supervisor.py &dir;/rc.gputuner &dir;/event/*
+
+[ -f &boot;/gputuner.cfg ] || printf 'SERVICE="disable"\n' &gt; &boot;/gputuner.cfg
+
+# restart after a plugin update if the service is enabled
+grep -q '^SERVICE="enable"' &boot;/gputuner.cfg &amp;&amp; &dir;/rc.gputuner start || true
+
+echo "----------------------------------------------------"
+echo " GPUTuner installed successfully."
+echo " Go to Settings &gt; Utilities &gt; GPUTuner, set a password, then start it."
+echo "----------------------------------------------------"
+exit 0
+</INLINE>
+</FILE>
+
+<FILE Run="/bin/bash" Method="remove">
+<INLINE>
+&dir;/rc.gputuner stop 2&gt;/dev/null
+rm -rf &dir; /usr/local/lib/gputuner
+rm -rf &boot;
+# Data directory (state, password hash) is kept on purpose: /mnt/user/appdata/gputuner by default.
+echo "GPUTuner removed."
+exit 0
+</INLINE>
+</FILE>
+
+</PLUGIN>

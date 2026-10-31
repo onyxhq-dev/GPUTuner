@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Maintainer>
+  <Icon>https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master/assets/logo.png</Icon>
+  <Profile>GPUTuner is a native Unraid plugin (no Docker) for NVIDIA GPU power limit, fan curve and clock cap control with a built-in web UI.</Profile>
+  <WebPage>https://github.com/onyxhq-dev/GPUTuner</WebPage>
+</Maintainer>

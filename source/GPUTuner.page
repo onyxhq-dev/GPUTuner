@@ -1,0 +1,63 @@
+Menu="Utilities"
+Title="GPU Tuner"
+Icon="GPUTuner.png"
+---
+<?
+$cfgf = "/boot/config/plugins/gputuner/gputuner.cfg";
+$c = array_merge(["SERVICE"=>"disable","DATA_DIR"=>"/mnt/user/appdata/gpu-tuner","PORT"=>"8765","LAN_IP"=>""],
+                 @parse_ini_file($cfgf) ?: []);
+$rc = "/usr/local/emhttp/plugins/GPUTuner/rc.gputuner";
+$sup = "/usr/local/emhttp/plugins/GPUTuner/supervisor.py";
+$msg = "";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['csrf_token'] ?? '') === $var['csrf_token']) {
+  $a = $_POST['action'] ?? '';
+  if ($a === 'save') {
+    $c['SERVICE']  = ($_POST['SERVICE'] ?? '') === 'enable' ? 'enable' : 'disable';
+    $c['PORT']     = (string)max(1024, min(65535, (int)$_POST['PORT']));
+    $c['LAN_IP']   = filter_var($_POST['LAN_IP'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) ?: '';
+    $d = rtrim($_POST['DATA_DIR'], '/');
+    $c['DATA_DIR'] = preg_match('#^/(mnt|boot)/[\w./-]+$#', $d) && strpos($d, '..') === false ? $d : $c['DATA_DIR'];
+    $out = ""; foreach ($c as $k => $v) $out .= "$k=\"$v\"\n";
+    file_put_contents($cfgf, $out);
+    $msg = "Saved. Restart the service to apply.";
+  } elseif (in_array($a, ['start','stop','restart'])) {
+    $msg = htmlspecialchars(shell_exec("$rc $a 2>&1"));
+  } elseif ($a === 'password') {
+    $p = popen("python3 $sup --set-password 2>&1", "w");
+    fwrite($p, $_POST['password']); pclose($p);
+    $msg = "Password update attempted (12-1024 chars required); try signing in.";
+  }
+}
+exec("$rc status", $o, $st); $up = ($st === 0);
+$ip = $c['LAN_IP'] ?: explode(' ', trim(shell_exec("ip -4 route get 1.1.1.1 | sed -n 's/.* src \\([0-9.]*\\).*/\\1/p'")))[0];
+$tok = htmlspecialchars($var['csrf_token']);
+?>
+<? if ($msg): ?><p><b><?=$msg?></b></p><? endif; ?>
+<p>Status: <b><?=$up ? 'running' : 'stopped'?></b>
+<? if ($up): ?> - <a href="http://<?=htmlspecialchars($ip)?>:<?=(int)$c['PORT']?>" target="_blank">Open GPU Tuner</a><? endif; ?></p>
+
+<form method="post">
+<input type="hidden" name="csrf_token" value="<?=$tok?>">
+<? foreach (['start','stop','restart'] as $b): ?>
+<button name="action" value="<?=$b?>"><?=ucfirst($b)?></button>
+<? endforeach; ?>
+</form>
+
+<form method="post">
+<input type="hidden" name="csrf_token" value="<?=$tok?>"><input type="hidden" name="action" value="save">
+<dl>
+<dt>Start with array:</dt><dd><select name="SERVICE"><option value="disable">No</option><option value="enable" <?=$c['SERVICE']=='enable'?'selected':''?>>Yes</option></select></dd>
+<dt>Data directory:</dt><dd><input name="DATA_DIR" value="<?=htmlspecialchars($c['DATA_DIR'])?>"></dd>
+<dt>Port:</dt><dd><input name="PORT" value="<?=htmlspecialchars($c['PORT'])?>"></dd>
+<dt>Server IPv4 (blank = auto):</dt><dd><input name="LAN_IP" value="<?=htmlspecialchars($c['LAN_IP'])?>"></dd>
+</dl>
+<input type="submit" value="Apply">
+</form>
+
+<form method="post">
+<input type="hidden" name="csrf_token" value="<?=$tok?>"><input type="hidden" name="action" value="password">
+<dl><dt>WebUI password (12+ chars, required before first start):</dt><dd><input type="password" name="password" autocomplete="new-password"></dd></dl>
+<input type="submit" value="Set password">
+</form>
+
+<p>Controls change real GPU settings and the UI is HTTP, intended for a trusted LAN. Needs the NVIDIA Driver plugin and Python 3.</p>
