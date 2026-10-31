@@ -7,7 +7,7 @@ $cfgf = "/boot/config/plugins/gputuner/gputuner.cfg";
 $c = array_merge(["SERVICE"=>"disable"], @parse_ini_file($cfgf) ?: []);
 $rc = "/usr/local/emhttp/plugins/GPUTuner/rc.gputuner";
 $msg = "";
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['csrf_token'] ?? '') === $var['csrf_token']) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $a = $_POST['action'] ?? '';
   if ($a === 'save') {
     $c['SERVICE'] = ($_POST['SERVICE'] ?? '') === 'enable' ? 'enable' : 'disable';

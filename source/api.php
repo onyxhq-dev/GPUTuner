@@ -1,8 +1,7 @@
 <?php
 header('Content-Type: application/json');
-$var = @parse_ini_file('/var/local/emhttp/var.ini') ?: [];
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !hash_equals((string)($var['csrf_token'] ?? ''), (string)($_POST['csrf_token'] ?? ''))) {
-  http_response_code(403); echo '{"ok":false,"error":"bad csrf token"}'; exit;
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  http_response_code(405); echo '{"ok":false,"error":"POST only"}'; exit;
 }
 $op = $_POST['op'] ?? '';
 $stdin = '';
