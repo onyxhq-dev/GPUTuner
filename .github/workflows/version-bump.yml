@@ -1,0 +1,53 @@
+name: version-bump
+
+on:
+  push:
+    branches: [master]
+    paths: ['source/**', 'assets/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: version-bump
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Bump version, changelog and hashes
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          today=$(date -u +%Y.%m.%d)
+          current=$(sed -n 's/.*<!ENTITY version *"\([^"]*\)".*/\1/p' gputuner.plg)
+          base=${current%?}
+          if [[ "$today" > "$base" ]]; then
+            next=a
+          else
+            today=$base
+            code=$(printf '%d' "'${current: -1}")
+            next=$(printf "\\x$(printf %x $((code + 1)))")
+          fi
+          V="$today$next"
+          SUBJECT=$(printf '%s' "${MESSAGE:-Update}" | head -n1)
+          export V SUBJECT
+          sed -i "s|\(<!ENTITY version *\"\)[^\"]*|\1$V|" gputuner.plg
+          sed -i "s|<Version>[^<]*</Version>|<Version>$V</Version>|" GPUTuner.xml
+          awk '{print} /^## GPUTuner/ {print "## " ENVIRON["V"]; print "- " ENVIRON["SUBJECT"]; print ""}' gputuner.plg > gputuner.plg.new
+          mv gputuner.plg.new gputuner.plg
+          bash update-hashes.sh
+          echo "version=$V" >> "$GITHUB_ENV"
+
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add gputuner.plg GPUTuner.xml
+          git commit -m "v${version}"
+          git pull --rebase origin master
+          git push origin master
