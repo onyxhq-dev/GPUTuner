@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "GPUTuner">
 <!ENTITY author    "onyxhq-dev">
-<!ENTITY version   "2026.11.01c">
+<!ENTITY version   "2026.11.01d">
 <!ENTITY launch    "Settings/GPUTuner">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master/gputuner.plg">
 <!ENTITY raw       "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master">
@@ -18,6 +18,9 @@
 
 <CHANGES>
 ## GPUTuner - NVIDIA GPU power, fan and clock control for Unraid
+## 2026.11.01d
+- Bundle Python 3.12, no host Python needed
+
 ## 2026.11.01c
 - Update
 
