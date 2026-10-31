@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "GPUTuner">
 <!ENTITY author    "onyxhq-dev">
-<!ENTITY version   "2026.11.01a">
+<!ENTITY version   "2026.11.01b">
 <!ENTITY launch    "Settings/GPUTuner">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master/gputuner.plg">
 <!ENTITY raw       "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master">
@@ -15,6 +15,9 @@
 
 <CHANGES>
 ## GPUTuner - NVIDIA GPU power, fan and clock control for Unraid
+## 2026.11.01b
+- Remove unneeded code comments
+
 ## 2026.11.01a
 - Initial release. Native plugin (no Docker, no separate web UI or password) built on the gpu-tunerd daemon from 0sy/gpu-tuner-unraid &upver; (MIT, based on willboyden/gpu-tuner): live readings, power limit, fan curve/fixed speed, clock cap and combined power budget per card, all inside Settings > Utilities > GPU Tuner
 </CHANGES>
