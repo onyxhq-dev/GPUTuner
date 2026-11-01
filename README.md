@@ -60,6 +60,15 @@ Updating the plugin restarts the service by itself if it was running.
 - Saved history is gentle on the flash drive: per-minute averages are written in one batch every 10 minutes and when the service stops (about 150 small writes a day, roughly 5 MB for 30 days), and files older than 30 days are deleted. It lives in `/boot/config/plugins/gputuner/data/history`, one file per day, next to your saved settings. Turn **Save history** off to stop writing it.
 - Stopping the service, or the array, hands fan control back to the NVIDIA driver. Power limits stay applied.
 
+## AMD GPUs (experimental, in testing)
+
+AMD cards that use the Linux `amdgpu` driver are detected automatically and show up next to NVIDIA cards. **This support is in testing and has not been verified on real hardware. Changes are written to your real GPU, so use it at your own risk.**
+
+- **What works:** live readings and history, a power cap (lower than the card's default only), and fan control with the same temperature safety floor as NVIDIA cards.
+- **What does not work yet:** clock caps, throttle reasons, and fan curves on newer cards (RX 7000 and RX 9000 series) that only offer the newer fan-curve interface. On those, manual fan control may not work.
+- **Try it safely first:** run `/usr/local/lib/gputuner/gputuner probe` in the Unraid terminal. It only reads. It prints what was detected and which amdgpu files exist, and writes nothing to the GPU. Open an issue with the output if something looks wrong.
+- Fans are always handed back to the driver when the service stops.
+
 ## Notes
 
 - GPUs passed through to a VM are not available to the plugin.
