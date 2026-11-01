@@ -51,8 +51,12 @@ pub struct GpuInfo {
     pub power_default_w: Option<i64>,
     pub thresholds: BTreeMap<String, i64>,
     pub mem_kind: String,
-    /// Supported graphics clocks (MHz) at the top memory clock, sorted.
+    /// Supported graphics clocks (MHz) at the top memory clock, sorted. Empty means no clock cap.
     pub clocks: Vec<i64>,
+    /// "nvidia" or "amd".
+    pub vendor: &'static str,
+    /// Highest clock to show on the page when `clocks` (the cap list) is empty.
+    pub display_clock_max: Option<i64>,
 }
 
 impl GpuInfo {
@@ -66,8 +70,9 @@ impl GpuInfo {
             "vbios": self.vbios, "nfans": self.nfans, "fan_min": self.fan_min, "fan_max": self.fan_max,
             "power_min_w": self.power_min_w, "power_max_w": self.power_max_w,
             "power_default_w": self.power_default_w, "thresholds": self.thresholds,
-            "mem_kind": self.mem_kind,
-            "clock_min_mhz": self.clocks.iter().min(), "clock_max_mhz": self.clocks.iter().max(),
+            "mem_kind": self.mem_kind, "vendor": self.vendor,
+            "clock_min_mhz": self.clocks.iter().min(),
+            "clock_max_mhz": self.clocks.iter().max().copied().or(self.display_clock_max),
         })
     }
 }

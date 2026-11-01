@@ -343,7 +343,10 @@ function build(g){
     const lg = h('h5'), canvas = h('canvas');
     return {def, legend: lg, canvas, el: h('div', {class:'gt-chart'}, lg, canvas)};
   });
-  c.el = h('div', {class:'gt-card'}, head, tl, c.panels, c.foot,
+  const amdNote = g.vendor === 'amd'
+    ? h('div', {class:'gt-note', style:'margin:12px 16px 0'}, 'AMD support is in testing. Changes are written to your real GPU and have not been verified on every card, so use it at your own risk. Clock caps are not available for AMD yet.')
+    : '';
+  c.el = h('div', {class:'gt-card'}, head, amdNote, tl, c.panels, c.foot,
     h('div', {class:'gt-histbar'}, h('h4', {}, 'History'),
       h('div', {class:'gt-histctl'}, h('div', {class:'gt-seg'}, ...c.winBtns.map(x => x[1])), h('label', {class:'gt-sub'}, 'or day'), c.dayIn)),
     h('div', {class:'gt-hist'}, ...c.charts.map(ch => ch.el)));
@@ -418,10 +421,12 @@ function fillLive(c, s){
   const key = (s.reasons || []).join();
   if (key !== c.chipKey) {
     c.chipKey = key;
-    c.chips.replaceChildren(...((s.reasons && s.reasons.length) ? s.reasons : [null]).map(k => {
-      const [text, kind] = k ? (REASON[k] || [k, 'mute']) : ['No limits active', 'ok'];
-      return h('span', {class: 'gt-chip ' + kind}, text);
-    }));
+    const amd = g.vendor === 'amd';
+    const items = (s.reasons && s.reasons.length)
+      ? s.reasons.map(k => REASON[k] || [k, 'mute'])
+      : [amd ? ['Throttle status n/a', 'mute'] : ['No limits active', 'ok']];
+    if (amd) items.unshift(['AMD: in testing', 'warn']);
+    c.chips.replaceChildren(...items.map(([text, kind]) => h('span', {class: 'gt-chip ' + kind}, text)));
   }
   const pci = (g.pci || '').replace(/^0+:/, '');
   c.sub.textContent = [pci && 'PCIe ' + pci, s.pstate != null ? 'P' + s.pstate : null, g.mem_kind === 'unified' ? 'shared memory' : null].filter(Boolean).join(' · ');

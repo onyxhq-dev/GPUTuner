@@ -85,6 +85,8 @@ impl FakeHw {
                 ]),
                 mem_kind: "dedicated".into(),
                 clocks: c.clocks.clone(),
+                vendor: "nvidia",
+                display_clock_max: None,
             })
             .collect();
         FakeHw { infos, state: Mutex::new(FakeState { cards, ..Default::default() }), driver: "595.84".into() }

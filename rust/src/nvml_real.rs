@@ -103,6 +103,8 @@ impl RealHw {
             thresholds,
             mem_kind: mem_kind.to_string(),
             clocks,
+            vendor: "nvidia",
+            display_clock_max: None,
         })
     }
 
