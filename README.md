@@ -30,7 +30,7 @@
 - **Reset to defaults** per card
 - **Start with array** and start/stop/restart from the same page
 - Works on phones and with Unraid themes
-- Python is bundled, nothing else to install
+- Tiny footprint: one native binary of about 800 KB using roughly 3 MB of RAM, nothing else to install
 
 ## Installation
 
