@@ -2,18 +2,21 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "GPUTuner">
 <!ENTITY author    "onyxhq-dev">
-<!ENTITY version   "2026.11.01q">
+<!ENTITY version   "2026.11.01r">
 <!ENTITY launch    "Settings/GPUTuner">
-<!ENTITY pluginURL "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master/gputuner.plg">
-<!ENTITY raw       "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/amd/gputuner.plg">
+<!ENTITY raw       "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/amd">
 <!ENTITY dir       "/usr/local/emhttp/plugins/GPUTuner">
 <!ENTITY boot      "/boot/config/plugins/gputuner">
-<!ENTITY binsha    "25c3e88ccbb32eb4bae052bbf5392576578b2d22ff017a80f2aa19fcba713fed">
+<!ENTITY binsha    "2c37626a4db8d71fa836d08247c7f1355330e662cf3b66e48eaac8234ed64a9e">
 ]>
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12" icon="microchip" support="https://github.com/onyxhq-dev/GPUTuner">
 
 <CHANGES>
 ## GPUTuner - NVIDIA GPU power, fan and clock control for Unraid
+## 2026.11.01r
+- Document AMD support as experimental
+
 ## 2026.11.01q
 - README: native binary footprint
 
@@ -85,7 +88,7 @@ exit 0
 
 <FILE Name="&dir;/GPUTuner.page">
 <URL>&raw;/source/GPUTuner.page</URL>
-<SHA256>667956a76f1e41f4a5ef06a3cc91ccd16a408dd2946617ca80ac009142843834</SHA256>
+<SHA256>fe617852db9fbef42106c413742bbde1f94f915e4f2266bae3aaf871ab75a86c</SHA256>
 </FILE>
 
 <FILE Name="&dir;/api.php">
