@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b2a35"/>
+      <stop offset="1" stop-color="#15141a"/>
+    </linearGradient>
+    <linearGradient id="arc" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffb866"/>
+      <stop offset="1" stop-color="#ff6a13"/>
+    </linearGradient>
+    <linearGradient id="blade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#b9bbc8"/>
+    </linearGradient>
+    <path id="b" d="M0,-16 C24,-22 48,-46 32,-76 C6,-64 -12,-40 0,-16 Z"/>
+  </defs>
+
+  <rect x="6" y="6" width="244" height="244" rx="56" fill="url(#bg)"/>
+  <rect x="6.5" y="6.5" width="243" height="243" rx="55.5" fill="none" stroke="#ffffff" stroke-opacity=".08"/>
+
+  <g transform="translate(128 128) rotate(135)" fill="none" stroke-linecap="round">
+    <circle r="100" stroke="#ffffff" stroke-opacity=".12" stroke-width="10" stroke-dasharray="471 628"/>
+    <circle r="100" stroke="url(#arc)" stroke-width="10" stroke-dasharray="353 628"/>
+  </g>
+
+  <circle cx="220.4" cy="89.7" r="14" fill="#15141a"/>
+  <circle cx="220.4" cy="89.7" r="9" fill="#ff8c2f"/>
+
+  <g transform="translate(128 128)">
+    <circle r="82" fill="#ffffff" fill-opacity=".05"/>
+    <g fill="url(#blade)">
+      <use href="#b"/>
+      <use href="#b" transform="rotate(72)"/>
+      <use href="#b" transform="rotate(144)"/>
+      <use href="#b" transform="rotate(216)"/>
+      <use href="#b" transform="rotate(288)"/>
+    </g>
+    <circle r="15" fill="#ff8c2f"/>
+    <circle r="6" fill="#15141a"/>
+  </g>
+</svg>

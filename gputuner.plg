@@ -119,7 +119,7 @@ exit 0
 
 <FILE Name="&dir;/images/GPUTuner.png">
 <URL>&raw;/assets/logo.png</URL>
-<SHA256>3987e83cc54b52a317a400cef186401f3a17ff54137e4b501b6e211e2c15aa57</SHA256>
+<SHA256>a3ba6c9ea1096a29dc8fa0d0817e128c35b45f377cd073311194e4cc3350f9b9</SHA256>
 </FILE>
 
 <FILE Run="/bin/bash">
