@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "GPUTuner">
 <!ENTITY author    "onyxhq-dev">
-<!ENTITY version   "2026.11.01i">
+<!ENTITY version   "2026.11.01j">
 <!ENTITY launch    "Settings/GPUTuner">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master/gputuner.plg">
 <!ENTITY raw       "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master">
@@ -18,6 +18,9 @@
 
 <CHANGES>
 ## GPUTuner - NVIDIA GPU power, fan and clock control for Unraid
+## 2026.11.01j
+- Restart the service after a plugin update if it was running
+
 ## 2026.11.01i
 - Add history charts: 5s sampler in RAM, 15 min / 1 h / 6 h windows
 
