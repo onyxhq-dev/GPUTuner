@@ -1,12 +1,12 @@
 #!/bin/bash
 PID=/var/run/gputuner.pid
 LOG=/var/log/gputuner.log
-S=/usr/local/emhttp/plugins/GPUTuner/supervisor.py
+BIN=/usr/local/lib/gputuner/gputuner
 running() { [ -f $PID ] && kill -0 "$(cat $PID)" 2>/dev/null; }
 case "$1" in
 start)
   running && { echo "already running"; exit 0; }
-  nohup /usr/local/lib/gputuner/python/bin/python3 $S >>$LOG 2>&1 &
+  nohup $BIN run >>$LOG 2>&1 &
   echo $! >$PID; sleep 2
   running || { echo "failed, see $LOG"; tail -n 3 $LOG; rm -f $PID; exit 1; } ;;
 stop)

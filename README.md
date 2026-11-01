@@ -74,18 +74,21 @@ Go to **Plugins**, find GPUTuner, and click **Remove**. Your saved settings stay
 ## Requirements
 
 - Unraid 6.12 or later (x86_64) with the NVIDIA Driver plugin
-- About 40 MB of flash (35 MB cached download plus up to about 5 MB of saved history) and about 90 MB of RAM for the unpacked copy (recreated on every boot)
+- About 6 MB of flash (the cached binary plus up to about 5 MB of saved history) and about 5 MB of RAM
 
 ## Development
 
 ```
-source/            files installed into the plugin (page, api, supervisor, scripts)
+rust/              the service: safety rules, fan loop, NVML access, sampler, socket server (cargo test, cargo build --release)
+source/            files installed into the plugin (page, api, scripts)
 assets/            logo.svg (source) and logo.png (rendered 256x256)
 gputuner.plg       installer
 update-hashes.sh   re-stamps the SHA256 of every downloaded file in the .plg
 ```
 
-Push to `master` and the `version-bump` workflow takes care of the rest: it sets the new version in `gputuner.plg` and `GPUTuner.xml`, adds your commit message to the changelog, and re-stamps the hashes. Write commit messages like changelog lines.
+Push to `master` and the `release` workflow takes care of the rest: it runs the tests, builds the binary, publishes it as a GitHub release, sets the new version and the binary's checksum in `gputuner.plg` and `GPUTuner.xml`, adds your commit message to the changelog, and re-stamps the hashes. Write commit messages like changelog lines.
+
+The service logic in `rust/src/safety.rs` and `rust/src/daemon.rs` is a port of the original gpu-tuner project (MIT), kept under its own licence in `rust/LICENSE-gpu-tuner`.
 
 To run the page locally against fake data, render it in a browser with a stubbed `$.post`. To change the logo, edit `assets/logo.svg` and render it to `assets/logo.png`.
 

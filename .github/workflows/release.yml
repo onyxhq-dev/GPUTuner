@@ -1,27 +1,35 @@
-name: version-bump
+name: release
 
 on:
   push:
-    branches: [master]
-    paths: ['source/**', 'assets/**', 'gputuner.plg']
+    branches: [master, rust]
+    paths: ['source/**', 'assets/**', 'rust/**', 'gputuner.plg', '.github/workflows/release.yml']
   workflow_dispatch:
 
 permissions:
   contents: write
 
-concurrency: version-bump
+concurrency: release-${{ github.ref_name }}
 
 jobs:
-  bump:
-    runs-on: ubuntu-latest
+  release:
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ github.ref_name }}
 
-      - name: Bump version, changelog and hashes
+      - name: Test and build
+        working-directory: rust
+        run: |
+          cargo test --locked
+          cargo build --release --locked
+
+      - name: Version, release and stamp the installer
         env:
           MESSAGE: ${{ github.event.head_commit.message }}
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           today=$(date -u +%Y.%m.%d)
           current=$(sed -n 's/.*<!ENTITY version *"\([^"]*\)".*/\1/p' gputuner.plg)
@@ -36,7 +44,17 @@ jobs:
           V="$today$next"
           SUBJECT=$(printf '%s' "${MESSAGE:-Update}" | head -n1)
           export V SUBJECT
+
+          cp rust/target/release/gputuner gputuner-x86_64
+          SHA=$(sha256sum gputuner-x86_64 | cut -d' ' -f1)
+          PRE=""; [ "$BRANCH" = master ] || PRE="--prerelease"
+          gh release create "$V" gputuner-x86_64 --title "$V" --notes "GPUTuner $V" --target "$GITHUB_SHA" $PRE
+
+          RAW="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$BRANCH"
           sed -i "s|\(<!ENTITY version *\"\)[^\"]*|\1$V|" gputuner.plg
+          sed -i "s|\(<!ENTITY binsha *\"\)[^\"]*|\1$SHA|" gputuner.plg
+          sed -i "s|\(<!ENTITY raw *\"\)[^\"]*|\1$RAW|" gputuner.plg
+          sed -i "s|\(<!ENTITY pluginURL *\"\)[^\"]*|\1$RAW/gputuner.plg|" gputuner.plg
           sed -i "s|<Version>[^<]*</Version>|<Version>$V</Version>|" GPUTuner.xml
           awk '{print} /^## GPUTuner/ {print "## " ENVIRON["V"]; print "- " ENVIRON["SUBJECT"]; print ""}' gputuner.plg > gputuner.plg.new
           mv gputuner.plg.new gputuner.plg
@@ -49,5 +67,5 @@ jobs:
           git config user.email github-actions@users.noreply.github.com
           git add gputuner.plg GPUTuner.xml
           git commit -m "v${version}"
-          git pull --rebase origin master
-          git push origin master
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push origin "${{ github.ref_name }}"

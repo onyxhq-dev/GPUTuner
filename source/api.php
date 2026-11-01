@@ -58,18 +58,20 @@ if ($op === 'history') {
   }
   echo json_encode($out); exit;
 }
-$stdin = '';
 if ($op === 'apply') {
   $req = json_decode($_POST['req'] ?? '', true);
   if (!is_array($req) || !in_array($req['op'] ?? '', ['set_power','set_fan','set_clock_cap','baseline','set_budget'], true)) {
     echo '{"ok":false,"error":"bad request"}'; exit;
   }
-  $stdin = json_encode($req);
-} elseif ($op !== 'state') {
+} elseif ($op === 'state') {
+  $req = ['op' => 'state'];
+} else {
   echo '{"ok":false,"error":"bad op"}'; exit;
 }
-$p = proc_open(['/usr/local/lib/gputuner/python/bin/python3', '/usr/local/emhttp/plugins/GPUTuner/api.py', $op], [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']], $pipes);
-if (!is_resource($p)) { echo '{"ok":false,"error":"cannot start python3"}'; exit; }
-fwrite($pipes[0], $stdin); fclose($pipes[0]);
-$out = stream_get_contents($pipes[1]); fclose($pipes[1]); fclose($pipes[2]); proc_close($p);
-echo $out !== '' ? $out : '{"ok":false,"error":"no output from api.py"}';
+$s = @stream_socket_client('unix:///run/gpu-tuner/control.sock', $errno, $errstr, 3);
+if (!$s) { echo '{"ok":false,"error":"The GPU Tuner service is not running"}'; exit; }
+stream_set_timeout($s, 10);
+fwrite($s, json_encode($req) . "\n");
+$line = fgets($s);
+fclose($s);
+echo ($line !== false && trim($line) !== '') ? $line : '{"ok":false,"error":"no answer from the service"}';

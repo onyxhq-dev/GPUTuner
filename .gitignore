@@ -4,5 +4,8 @@
 # Unraid plugin temp files (created when editing .plg live on the server)
 *.plg.tmp.*
 
-# Local reference clone of the upstream container repo
+# Local reference clone of the original container project
 upstream/
+
+# Rust build output
+rust/target/
