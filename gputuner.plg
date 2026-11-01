@@ -2,7 +2,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "GPUTuner">
 <!ENTITY author    "onyxhq-dev">
-<!ENTITY version   "2026.11.01n">
+<!ENTITY version   "2026.11.01o">
 <!ENTITY launch    "Settings/GPUTuner">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master/gputuner.plg">
 <!ENTITY raw       "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master">
@@ -18,6 +18,9 @@
 
 <CHANGES>
 ## GPUTuner - NVIDIA GPU power, fan and clock control for Unraid
+## 2026.11.01o
+- Save history across reboots: per-minute data on flash, 24h/7d/30d ranges, pick a past day, Save history switch
+
 ## 2026.11.01n
 - Rewrite README, plain MIT license
 
