@@ -1,11 +1,43 @@
 #!/usr/bin/env python3
 # Plugin supervisor, adapted from 0sy/gpu-tuner-unraid container/entrypoint.py (MIT).
-import json, os, signal, subprocess, sys
+import json, os, signal, subprocess, sys, threading, time
 
 DATA = "/boot/config/plugins/gputuner/data"
 ROOT = "/usr/local/lib/gputuner"
 RUN = "/run/gpu-tuner"
 SOCK = RUN + "/control.sock"
+HISTORY = RUN + "/history.jsonl"
+SAMPLE_S, KEEP = 5, 4320
+
+
+def sampler():
+    sys.path[:0] = [ROOT, ROOT + "/vendor"]
+    try:
+        from gpu_tuner.nvml import Nvml
+        nv = Nvml()
+    except Exception:
+        return
+    n = 0
+    while True:
+        row = {}
+        for g in nv.gpus:
+            try:
+                s = nv.sample(g)
+            except Exception:
+                continue
+            fans = [f for f in s["fans"] if f is not None]
+            row[g.uuid] = [s["temp"], max(fans) if fans else None, s["power_w"], s["power_limit_w"],
+                           s["clock_mhz"], s["util"], s["vram_used_mib"], s["vram_total_mib"]]
+        with open(HISTORY, "a") as f:
+            f.write(json.dumps({"t": int(time.time()), "g": row}) + "\n")
+        n += 1
+        if n % 120 == 0:
+            with open(HISTORY) as f:
+                lines = f.readlines()[-KEEP:]
+            with open(HISTORY + ".tmp", "w") as f:
+                f.writelines(lines)
+            os.replace(HISTORY + ".tmp", HISTORY)
+        time.sleep(SAMPLE_S)
 
 
 def main():
@@ -23,6 +55,7 @@ def main():
     daemon = subprocess.Popen(cmd, env=env)
     signal.signal(signal.SIGTERM, lambda *_: daemon.terminate())
     signal.signal(signal.SIGINT, lambda *_: daemon.terminate())
+    threading.Thread(target=sampler, daemon=True).start()
     try:
         rc = daemon.wait()
     finally:

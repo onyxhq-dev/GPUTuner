@@ -58,6 +58,15 @@ $log = trim((string)@shell_exec("tail -n 40 /var/log/gputuner.log 2>/dev/null"))
 .gt-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:0 16px 14px}
 .gt-note{border-left:4px solid var(--warn);padding:6px 12px;margin:0 0 12px;background:var(--soft);border-radius:0 6px 6px 0}
 .gt-sum{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 16px;border:1px solid var(--line);border-radius:8px;margin:0 0 16px}
+.gt-histbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 16px 0;border-top:1px solid var(--line);padding-top:12px}
+.gt-histbar h4{margin:0;flex:1}
+.gt-histbar button.on{outline:2px solid var(--acc)}
+.gt-hist{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:12px;padding:10px 16px 16px}
+.gt-chart{border:1px solid var(--line);border-radius:6px;padding:8px 12px}
+.gt-chart h5{margin:0 0 4px;font-size:.95em;display:flex;flex-wrap:wrap;gap:2px 14px;align-items:baseline}
+.gt-chart h5 span{font-weight:normal;font-size:.85em;opacity:.85;white-space:nowrap}
+.gt-chart h5 span::before{content:"";display:inline-block;width:10px;height:3px;margin-right:5px;vertical-align:middle;background:var(--c)}
+.gt-chart canvas{width:100%;height:120px;display:block}
 .gt details{margin:8px 0 16px}
 .gt pre{max-height:260px;overflow:auto;padding:10px;border:1px solid var(--line);border-radius:6px;white-space:pre-wrap}
 </style>
@@ -139,6 +148,81 @@ function slider(min, max, step, onchange){
   return {n, r, set, limits};
 }
 
+const WINDOWS = [[900, '15 min'], [3600, '1 hour'], [21600, '6 hours']];
+const CHARTS = [
+  {title: 'Temperature & fan', max: 100, series: [{k:'temp', label:'Temp', unit:'°C', color:'#ff8c2f'}, {k:'fan', label:'Fan', unit:'%', color:'#3b9cff'}]},
+  {title: 'Power', series: [{k:'power', label:'Draw', unit:'W', color:'#ff8c2f'}, {k:'limit', label:'Limit', unit:'W', color:'#3b9cff', dash:true}]},
+  {title: 'Core clock', series: [{k:'clock', label:'Clock', unit:'MHz', color:'#2ea44f'}]},
+  {title: 'Utilization & VRAM', max: 100, series: [{k:'util', label:'GPU', unit:'%', color:'#a371f7'}, {k:'vram', label:'VRAM', unit:'%', color:'#3b9cff'}]},
+];
+let histWin = 900;
+try { histWin = +localStorage.getItem('gt-win') || 900; } catch (e) {}
+
+function legend(ch, d){
+  ch.legend.replaceChildren(h('b', {}, ch.def.title), ...ch.def.series.map(s => {
+    const vals = ((d && d[s.k]) || []).filter(v => v != null);
+    const last = vals.length ? vals[vals.length - 1] : null;
+    return h('span', {style: '--c:' + s.color}, `${s.label} ${num(last)} ${s.unit}` + (vals.length ? ` (max ${num(Math.max(...vals))})` : ''));
+  }));
+}
+
+function drawChart(ch, t, d){
+  const cv = ch.canvas, dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (!W) return;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const x = cv.getContext('2d'); x.scale(dpr, dpr);
+  x.font = '10px sans-serif'; x.fillStyle = getComputedStyle(cv).color;
+  legend(ch, d);
+  if (!t || t.length < 2) { x.textAlign = 'center'; x.globalAlpha = .7; x.fillText('Collecting data...', W / 2, H / 2); return; }
+  const padL = 34, padR = 4, padT = 6, padB = 16, pw = W - padL - padR, ph = H - padT - padB;
+  const all = ch.def.series.flatMap(s => (d[s.k] || []).filter(v => v != null));
+  const top = Math.max(1, ...all) * 1.05, pow = Math.pow(10, Math.floor(Math.log10(top)));
+  const max = ch.def.max || [1, 2, 2.5, 4, 5, 8, 10].map(m => m * pow).find(v => v >= top);
+  const t0 = t[0], span = Math.max(1, t[t.length - 1] - t0);
+  const X = ts => padL + (ts - t0) / span * pw, Y = v => padT + ph - Math.min(v, max) / max * ph;
+  x.strokeStyle = 'rgba(128,128,128,.25)'; x.lineWidth = 1; x.globalAlpha = .75;
+  x.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = max * i / 4, y = Y(v);
+    x.beginPath(); x.moveTo(padL, y); x.lineTo(W - padR, y); x.stroke();
+    x.fillText(Math.round(v), padL - 4, y + 3);
+  }
+  for (let i = 0; i <= 3; i++) {
+    const ts = t0 + span * i / 3, dt = new Date(ts * 1000);
+    x.textAlign = i === 0 ? 'left' : i === 3 ? 'right' : 'center';
+    x.fillText(dt.toTimeString().slice(0, 5), padL + pw * i / 3, H - 3);
+  }
+  x.globalAlpha = 1;
+  const dts = t.slice(1).map((v, i) => v - t[i]).sort((a, b) => a - b);
+  const gap = Math.max(30, (dts[dts.length >> 1] || 5) * 4);
+  for (const s of ch.def.series) {
+    x.strokeStyle = s.color; x.lineWidth = 1.6; x.setLineDash(s.dash ? [5, 4] : []);
+    x.beginPath();
+    let pen = false;
+    (d[s.k] || []).forEach((v, i) => {
+      if (v == null) { pen = false; return; }
+      if (i > 0 && t[i] - t[i - 1] > gap) pen = false;
+      if (pen) x.lineTo(X(t[i]), Y(v)); else { x.moveTo(X(t[i]), Y(v)); pen = true; }
+    });
+    x.stroke();
+  }
+  x.setLineDash([]);
+}
+
+function fetchHist(){
+  call({op:'history', window: histWin}).done(r => {
+    if (!r.ok) return;
+    for (const [uuid, c] of Object.entries(cards)) for (const ch of c.charts) drawChart(ch, r.t, (r.gpus || {})[uuid] || {});
+  });
+}
+
+function setWin(w){
+  histWin = w;
+  try { localStorage.setItem('gt-win', String(w)); } catch (e) {}
+  for (const c of Object.values(cards)) c.winBtns.forEach(([ws, b]) => b.classList.toggle('on', ws === w));
+  fetchHist();
+}
+
 function build(g){
   const c = {dirty:{}, uuid:g.uuid, g};
   const dirty = grp => () => { c.dirty[grp] = true; };
@@ -181,7 +265,16 @@ function build(g){
   c.foot = h('div', {class:'gt-foot'}, c.rBtn, c.rMsg);
 
   c.panels = h('div', {class:'gt-panels'}, c.pPanel, c.fPanel, c.cPanel);
-  c.el = h('div', {class:'gt-card'}, h('div', {class:'gt-head'}, c.title, c.sub), tl, c.throttle, c.panels, c.foot);
+
+  c.winBtns = WINDOWS.map(([w, label]) => [w, h('button', {class: w === histWin ? 'on' : '', onclick: () => setWin(w)}, label)]);
+  c.charts = CHARTS.map(def => {
+    const lg = h('h5'), canvas = h('canvas');
+    return {def, legend: lg, canvas, el: h('div', {class:'gt-chart'}, lg, canvas)};
+  });
+  c.el = h('div', {class:'gt-card'}, h('div', {class:'gt-head'}, c.title, c.sub), tl, c.throttle, c.panels, c.foot,
+    h('div', {class:'gt-histbar'}, h('h4', {}, 'History'), ...c.winBtns.map(x => x[1])),
+    h('div', {class:'gt-hist'}, ...c.charts.map(ch => ch.el)));
+  for (const ch of c.charts) legend(ch, null);
   return c;
 }
 
@@ -281,15 +374,17 @@ function render(d){
   if (box.querySelector('p')) box.replaceChildren();
   const stat = {};
   for (const g of (d.status && d.status.gpus) || []) stat[g.uuid] = g;
+  let created = false;
   for (const g of d.static) {
     let c = cards[g.uuid];
-    if (!c) { c = cards[g.uuid] = build(g); box.append(c.el); }
+    if (!c) { c = cards[g.uuid] = build(g); box.append(c.el); created = true; }
     c.g = g;
     c.title.textContent = `GPU ${g.index}: ${g.name}`;
     fillLive(c, d.live[g.uuid]);
     if (stat[g.uuid]) fillStatic(c, stat[g.uuid], d.status);
   }
   renderTop(d.status || {}, d.daemon_error ? 'Control daemon: ' + d.daemon_error : null);
+  if (created) fetchHist();
 }
 
 function poll(){
@@ -297,6 +392,7 @@ function poll(){
   call({op:'state'}).done(render).fail(() => notice('Request failed', true)).always(() => setTimeout(poll, 3000));
 }
 poll();
+setInterval(() => { if (!document.hidden) fetchHist(); }, 10000);
 })();
 </script>
 <? endif; ?>
