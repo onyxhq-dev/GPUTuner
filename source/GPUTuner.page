@@ -22,51 +22,83 @@ $tok = htmlspecialchars($var['csrf_token']);
 $log = trim((string)@shell_exec("tail -n 40 /var/log/gputuner.log 2>/dev/null"));
 ?>
 <style>
-.gt{--line:rgba(128,128,128,.35);--soft:rgba(128,128,128,.12);--ok:#2ea44f;--warn:#e9a100;--bad:#e5484d;--acc:#ff8c2f}
+.gt{--line:rgba(128,128,128,.32);--soft:rgba(128,128,128,.10);--ok:#2ea44f;--warn:#e9a100;--bad:#e5484d;--acc:#ff8c2f;--r:8px}
+.gt *{box-sizing:border-box}
 .gt [hidden]{display:none!important}
-.gt button,.gt select,.gt input{margin:0}
-.gt input[type=number]{width:84px}
-.gt input[type=range]{flex:1;min-width:90px;padding:0}
-.gt-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 16px;border:1px solid var(--line);border-radius:8px;margin:0 0 16px}
-.gt-bar form{display:flex;align-items:center;gap:8px;margin:0}
-.gt-pill{display:inline-flex;align-items:center;gap:7px;font-weight:bold;padding:3px 12px;border-radius:99px;background:var(--soft)}
-.gt-pill::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--bad)}
-.gt-pill.on::before{background:var(--ok)}
+.gt button,.gt select,.gt input{margin:0;vertical-align:middle}
+.gt select,.gt input[type=number]{height:30px;padding:0 8px}
+.gt input[type=number]{width:76px}
+.gt input[type=range]{flex:1;min-width:80px;padding:0;height:20px}
+.gt input[type=range],.gt input[type=checkbox]{accent-color:var(--acc)}
+.gt button{height:30px;padding:0 14px;cursor:pointer}
+.gt button:disabled,.gt select:disabled,.gt input:disabled{opacity:.45;cursor:default}
+.gt .gt-apply{background:var(--acc);color:#1b1b1b;border:0;border-radius:4px;font-weight:bold;padding:0 20px}
+.gt .gt-apply:disabled{background:var(--soft);color:inherit}
 .gt-grow{flex:1}
-.gt-card{border:1px solid var(--line);border-radius:8px;margin:0 0 16px;overflow:hidden}
-.gt-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:12px 16px;background:var(--soft)}
-.gt-head h3{margin:0;font-size:1.25em}
-.gt-sub{opacity:.7;font-size:.9em}
-.gt-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:14px 16px 4px}
-.gt-tile{border:1px solid var(--line);border-radius:6px;padding:8px 12px}
-.gt-tile small{display:block;opacity:.7;text-transform:uppercase;letter-spacing:.04em;font-size:.72em}
-.gt-tile b{display:block;font-size:1.45em;margin:2px 0 6px;white-space:nowrap}
-.gt-tile b.warn{color:var(--warn)}.gt-tile b.bad{color:var(--bad)}
-.gt-meter{height:5px;border-radius:3px;background:var(--soft);overflow:hidden}
-.gt-meter i{display:block;height:100%;width:0;background:var(--acc);transition:width 1s linear}
-.gt-throttle{padding:6px 16px 0;font-size:.9em;opacity:.8}
-.gt-panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;padding:14px 16px}
-.gt-panel{border:1px solid var(--line);border-radius:6px;padding:10px 14px;display:flex;flex-direction:column;gap:9px}
-.gt-panel h4{margin:0;font-size:1em}
-.gt-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.gt-row label{font-weight:normal}
+.gt-sub{opacity:.68;font-size:.88em}
+.gt-unit{opacity:.75;min-width:1.6em}
+
+.gt-bar,.gt-sum{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 16px;border:1px solid var(--line);border-radius:var(--r);margin:0 0 16px}
+.gt-bar form,.gt-sum .gt-bud{display:flex;align-items:center;gap:8px;margin:0}
+.gt-pill{display:inline-flex;align-items:center;gap:8px;font-weight:bold;height:30px;padding:0 14px;border-radius:99px;background:var(--soft)}
+.gt-pill::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--bad)}
+.gt-pill.on::before{background:var(--ok);box-shadow:0 0 0 3px rgba(46,164,79,.25)}
+.gt-total{display:flex;flex-direction:column;line-height:1.2}
+.gt-total small{opacity:.65;text-transform:uppercase;letter-spacing:.05em;font-size:.7em}
+.gt-total b{font-size:1.35em}
+.gt-note{border-left:4px solid var(--warn);padding:8px 14px;margin:0 0 14px;background:var(--soft);border-radius:0 6px 6px 0}
+
+.gt-card{border:1px solid var(--line);border-radius:var(--r);margin:0 0 20px;overflow:hidden}
+.gt-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;padding:14px 16px;background:var(--soft);border-bottom:1px solid var(--line)}
+.gt-id{display:flex;flex-direction:column;gap:3px;min-width:0}
+.gt-id h3{margin:0;font-size:1.25em;line-height:1.2;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gt-idx{font-size:.62em;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;padding:2px 9px;border-radius:99px;background:var(--acc);color:#1b1b1b}
 .gt-chips{display:flex;flex-wrap:wrap;gap:6px}
-.gt-chips button{padding:2px 10px;font-size:.85em}
-.gt-msg{opacity:.8;font-size:.88em;min-height:1.2em}
+.gt-chip{font-size:.88em;font-weight:bold;padding:4px 13px;border-radius:99px;background:var(--soft)}
+.gt-chip.ok{background:rgba(46,164,79,.18);color:var(--ok)}
+.gt-chip.warn{background:rgba(233,161,0,.18);color:var(--warn)}
+.gt-chip.bad{background:rgba(229,72,77,.18);color:var(--bad)}
+
+.gt-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:16px 16px 4px}
+.gt-tile{border:1px solid var(--line);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.gt-tile small{opacity:.65;text-transform:uppercase;letter-spacing:.05em;font-size:.7em}
+.gt-tile b{font-size:1.5em;line-height:1.1;white-space:nowrap}
+.gt-tile b.warn{color:var(--warn)}.gt-tile b.bad{color:var(--bad)}
+.gt-tile em{font-style:normal;opacity:.62;font-size:.8em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gt-meter{height:5px;border-radius:3px;background:var(--soft);overflow:hidden;margin:2px 0}
+.gt-meter i{display:block;height:100%;width:0;background:var(--acc);transition:width 1s linear}
+
+.gt-panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px;padding:12px 16px 16px}
+.gt-panel{border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:12px}
+.gt-ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.gt-ph h4{margin:0;font-size:1.02em}
+.gt-body{display:flex;flex-direction:column;gap:10px;flex:1}
+.gt-pf{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:30px}
+.gt-row{display:flex;align-items:center;gap:8px}
+.gt-row.wrap{flex-wrap:wrap}
+.gt-row select{flex:1;min-width:0}
+.gt-row label{font-weight:normal;cursor:pointer}
+.gt-presets{display:flex;flex-wrap:wrap;gap:6px}
+.gt-presets button{height:26px;padding:0 10px;font-size:.85em}
+.gt-msg{opacity:.8;font-size:.86em}
 .gt-err{color:var(--bad);opacity:1}
 .gt-ok{color:var(--ok);opacity:1}
-.gt-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:0 16px 14px}
-.gt-note{border-left:4px solid var(--warn);padding:6px 12px;margin:0 0 12px;background:var(--soft);border-radius:0 6px 6px 0}
-.gt-sum{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 16px;border:1px solid var(--line);border-radius:8px;margin:0 0 16px}
-.gt-histbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:4px 16px 0;border-top:1px solid var(--line);padding-top:12px}
-.gt-histbar h4{margin:0;flex:1}
-.gt-histbar button.on{outline:2px solid var(--acc)}
-.gt-hist{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:12px;padding:10px 16px 16px}
-.gt-chart{border:1px solid var(--line);border-radius:6px;padding:8px 12px}
-.gt-chart h5{margin:0 0 4px;font-size:.95em;display:flex;flex-wrap:wrap;gap:2px 14px;align-items:baseline}
+.gt-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:0 16px 16px}
+
+.gt-histbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px 0;border-top:1px solid var(--line)}
+.gt-histbar h4{margin:0}
+.gt-seg{display:inline-flex}
+.gt-seg button{border-radius:0;margin-left:-1px;border:1px solid var(--line);background:transparent;color:inherit;height:28px;padding:0 14px}
+.gt-seg button:first-child{border-radius:5px 0 0 5px;margin-left:0}
+.gt-seg button:last-child{border-radius:0 5px 5px 0}
+.gt-seg button.on{background:var(--acc);border-color:var(--acc);color:#1b1b1b;font-weight:bold}
+.gt-hist{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:12px;padding:12px 16px 16px}
+.gt-chart{border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.gt-chart h5{margin:0 0 6px;font-size:.95em;display:flex;flex-wrap:wrap;gap:2px 14px;align-items:baseline}
 .gt-chart h5 span{font-weight:normal;font-size:.85em;opacity:.85;white-space:nowrap}
 .gt-chart h5 span::before{content:"";display:inline-block;width:10px;height:3px;margin-right:5px;vertical-align:middle;background:var(--c)}
 .gt-chart canvas{width:100%;height:120px;display:block}
+
 .gt details{margin:8px 0 16px}
 .gt pre{max-height:260px;overflow:auto;padding:10px;border:1px solid var(--line);border-radius:6px;white-space:pre-wrap}
 </style>
@@ -122,6 +154,12 @@ const call = body => $.post(API, Object.assign({csrf_token: CSRF}, body), null, 
 const num = (v, d=0) => (v==null || isNaN(v)) ? '-' : (+v).toFixed(d);
 const pct = (a, b) => (a==null || !b) ? 0 : Math.max(0, Math.min(100, a / b * 100));
 
+const REASON = {
+  idle: ['Idle', 'mute'], app_clocks: ['App clocks', 'mute'], sync_boost: ['Sync boost', 'mute'], display_clock: ['Display clock', 'mute'],
+  sw_power_cap: ['Power cap', 'warn'], sw_thermal: ['Thermal limit', 'warn'],
+  hw_slowdown: ['Hardware slowdown', 'bad'], hw_thermal: ['Thermal slowdown', 'bad'], hw_power_brake: ['Power brake', 'bad'],
+};
+
 function say(el, text, kind){ el.textContent = text; el.className = 'gt-msg' + (kind ? ' gt-' + kind : ''); }
 
 function send(card, group, req, msgEl, okText){
@@ -135,17 +173,23 @@ function send(card, group, req, msgEl, okText){
 }
 
 function tile(label){
-  const val = h('b'), fill = h('i'), el = h('div', {class:'gt-tile'}, h('small', {}, label), val, h('div', {class:'gt-meter'}, fill));
-  return {el, val, fill};
+  const val = h('b'), fill = h('i'), cap = h('em');
+  return {el: h('div', {class:'gt-tile'}, h('small', {}, label), val, h('div', {class:'gt-meter'}, fill), cap), val, fill, cap};
 }
 
-function slider(min, max, step, onchange){
+function slider(step, onchange){
   const n = h('input', {type:'number', step}), r = h('input', {type:'range', step});
   n.oninput = () => { r.value = n.value; onchange(); };
   r.oninput = () => { n.value = r.value; onchange(); };
-  const set = (v) => { n.value = r.value = v; };
-  const limits = (a, b) => { n.min = r.min = a; n.max = r.max = b; };
-  return {n, r, set, limits};
+  return {n, r,
+    set: v => { n.value = r.value = v; },
+    limits: (a, b) => { n.min = r.min = a; n.max = r.max = b; }};
+}
+
+function panel(title){
+  const hint = h('span', {class:'gt-sub'}), body = h('div', {class:'gt-body'}), msg = h('span', {class:'gt-msg'}), btn = h('button', {class:'gt-apply'}, 'Apply');
+  return {hint, body, msg, btn,
+    el: h('div', {class:'gt-panel'}, h('div', {class:'gt-ph'}, h('h4', {}, title), hint), body, h('div', {class:'gt-pf'}, msg, btn))};
 }
 
 const WINDOWS = [[900, '15 min'], [3600, '1 hour'], [21600, '6 hours']];
@@ -227,52 +271,52 @@ function build(g){
   const c = {dirty:{}, uuid:g.uuid, g};
   const dirty = grp => () => { c.dirty[grp] = true; };
 
-  c.title = h('h3'); c.sub = h('span', {class:'gt-sub'});
+  c.title = h('span'); c.sub = h('div', {class:'gt-sub'}); c.chips = h('div', {class:'gt-chips'});
+  const head = h('div', {class:'gt-head'}, h('div', {class:'gt-id'}, h('h3', {}, h('span', {class:'gt-idx'}, 'GPU ' + g.index), c.title), c.sub), c.chips);
+
   c.tiles = {};
   const tl = h('div', {class:'gt-tiles'});
   for (const k of ['Temperature','Fan','Power','Core clock','Utilization','VRAM']) { c.tiles[k] = tile(k); tl.append(c.tiles[k].el); }
-  c.throttle = h('div', {class:'gt-throttle'});
 
-  c.pS = slider(0, 0, 1, dirty('p')); c.pPre = h('div', {class:'gt-chips'}); c.pMsg = h('div', {class:'gt-msg'});
-  c.pBtn = h('button', {onclick: () => send(c,'p',{op:'set_power',uuid:g.uuid,watts:+c.pS.n.value}, c.pMsg, 'Power limit applied.')}, 'Apply');
-  c.pPanel = h('div', {class:'gt-panel'}, h('h4', {}, 'Power limit'),
-    h('div', {class:'gt-row'}, c.pS.r, c.pS.n, h('span', {}, 'W'), c.pBtn), c.pPre, c.pMsg);
+  const P = c.P = panel('Power limit');
+  c.pS = slider(1, dirty('p')); c.pPre = h('div', {class:'gt-presets'});
+  P.body.append(h('div', {class:'gt-row'}, c.pS.r, c.pS.n, h('span', {class:'gt-unit'}, 'W')), c.pPre);
+  P.btn.onclick = () => send(c, 'p', {op:'set_power', uuid:g.uuid, watts:+c.pS.n.value}, P.msg, 'Power limit applied.');
 
+  const F = c.F = panel('Fan');
   c.fMode = h('select', {onchange: () => { dirty('f')(); fanVis(c); }},
-    h('option',{value:'auto'},'Driver default'), h('option',{value:'curve'},'Curve'), h('option',{value:'manual'},'Fixed speed'));
+    h('option', {value:'auto'}, 'Driver default'), h('option', {value:'curve'}, 'Curve'), h('option', {value:'manual'}, 'Fixed speed'));
   c.fCurve = h('select', {onchange: dirty('f')});
-  c.fS = slider(0, 100, 1, dirty('f'));
-  c.fCurveRow = h('div', {class:'gt-row'}, h('span', {}, 'Curve'), c.fCurve);
-  c.fManualRow = h('div', {class:'gt-row'}, c.fS.r, c.fS.n, h('span', {}, '%'));
-  c.fMsg = h('div', {class:'gt-msg'}); c.fInfo = h('div', {class:'gt-sub'});
-  c.fBtn = h('button', {onclick: () => {
+  c.fS = slider(1, dirty('f')); c.fInfo = h('div', {class:'gt-sub'});
+  c.fCurveRow = h('div', {class:'gt-row'}, h('span', {class:'gt-sub'}, 'Preset'), c.fCurve);
+  c.fManualRow = h('div', {class:'gt-row'}, c.fS.r, c.fS.n, h('span', {class:'gt-unit'}, '%'));
+  F.body.append(h('div', {class:'gt-row'}, c.fMode), c.fCurveRow, c.fManualRow, c.fInfo);
+  F.btn.onclick = () => {
     const st = c.st.settings.fan, presets = c.stAll.curve_presets || {};
     const curve = presets[c.fCurve.value] ? presets[c.fCurve.value].curve : st.curve;
-    send(c,'f',{op:'set_fan',uuid:g.uuid,mode:c.fMode.value,curve,manual_pct:+c.fS.n.value||st.manual_pct}, c.fMsg, 'Fan setting applied.');
-  }}, 'Apply');
-  c.fPanel = h('div', {class:'gt-panel'}, h('h4', {}, 'Fan'),
-    h('div', {class:'gt-row'}, c.fMode, c.fBtn), c.fCurveRow, c.fManualRow, c.fInfo, c.fMsg);
+    send(c, 'f', {op:'set_fan', uuid:g.uuid, mode:c.fMode.value, curve, manual_pct:+c.fS.n.value || st.manual_pct}, F.msg, 'Fan setting applied.');
+  };
 
-  c.cOff = h('input', {type:'checkbox', id:'cap-' + g.index, onchange: () => { dirty('c')(); c.cS.n.disabled = c.cS.r.disabled = c.cOff.checked; }});
-  c.cS = slider(0, 0, 15, dirty('c')); c.cMsg = h('div', {class:'gt-msg'});
-  c.cBtn = h('button', {onclick: () => send(c,'c',{op:'set_clock_cap',uuid:g.uuid,mhz:c.cOff.checked?null:+c.cS.n.value}, c.cMsg, 'Clock cap applied.')}, 'Apply');
-  c.cPanel = h('div', {class:'gt-panel'}, h('h4', {}, 'Core clock cap'),
-    h('div', {class:'gt-row'}, c.cS.r, c.cS.n, h('span', {}, 'MHz'), c.cBtn),
-    h('div', {class:'gt-row'}, c.cOff, h('label', {for:'cap-' + g.index}, 'No cap')), c.cMsg);
+  const C = c.C = panel('Core clock cap');
+  c.cS = slider(15, dirty('c'));
+  c.cOff = h('input', {type:'checkbox', id:'cap-' + g.index, onchange: () => { dirty('c')(); capLock(c); }});
+  C.body.append(h('div', {class:'gt-row'}, c.cS.r, c.cS.n, h('span', {class:'gt-unit'}, 'MHz')),
+    h('div', {class:'gt-row'}, c.cOff, h('label', {for:'cap-' + g.index}, 'No cap (full boost)')));
+  C.btn.onclick = () => send(c, 'c', {op:'set_clock_cap', uuid:g.uuid, mhz:c.cOff.checked ? null : +c.cS.n.value}, C.msg, 'Clock cap applied.');
+
+  c.panels = h('div', {class:'gt-panels'}, P.el, F.el, C.el);
 
   c.rMsg = h('span', {class:'gt-msg'});
-  c.rBtn = h('button', {onclick: () => { if (confirm('Reset fan curve, clock cap and power limit to safe defaults?')) send(c,'r',{op:'baseline',uuid:g.uuid}, c.rMsg, 'Reset to defaults.'); }}, 'Reset to defaults');
+  c.rBtn = h('button', {onclick: () => { if (confirm('Reset fan curve, clock cap and power limit to safe defaults?')) send(c, 'r', {op:'baseline', uuid:g.uuid}, c.rMsg, 'Reset to defaults.'); }}, 'Reset to defaults');
   c.foot = h('div', {class:'gt-foot'}, c.rBtn, c.rMsg);
-
-  c.panels = h('div', {class:'gt-panels'}, c.pPanel, c.fPanel, c.cPanel);
 
   c.winBtns = WINDOWS.map(([w, label]) => [w, h('button', {class: w === histWin ? 'on' : '', onclick: () => setWin(w)}, label)]);
   c.charts = CHARTS.map(def => {
     const lg = h('h5'), canvas = h('canvas');
     return {def, legend: lg, canvas, el: h('div', {class:'gt-chart'}, lg, canvas)};
   });
-  c.el = h('div', {class:'gt-card'}, h('div', {class:'gt-head'}, c.title, c.sub), tl, c.throttle, c.panels, c.foot,
-    h('div', {class:'gt-histbar'}, h('h4', {}, 'History'), ...c.winBtns.map(x => x[1])),
+  c.el = h('div', {class:'gt-card'}, head, tl, c.panels, c.foot,
+    h('div', {class:'gt-histbar'}, h('h4', {}, 'History'), h('div', {class:'gt-seg'}, ...c.winBtns.map(x => x[1]))),
     h('div', {class:'gt-hist'}, ...c.charts.map(ch => ch.el)));
   for (const ch of c.charts) legend(ch, null);
   return c;
@@ -283,60 +327,75 @@ function fanVis(c){
   c.fManualRow.hidden = c.fMode.value !== 'manual';
 }
 
+function capLock(c){ c.cS.n.disabled = c.cS.r.disabled = c.cOff.checked; }
+
 function fillStatic(c, st, all){
   const g = c.g;
   c.st = st; c.stAll = all;
   const locked = !!all.preview || st.settings.fan.mode === 'unmanaged';
 
-  c.pPanel.hidden = !st.power_range;
+  c.P.el.hidden = !st.power_range;
   if (st.power_range) {
+    c.P.hint.textContent = `${st.power_range[0]}-${st.power_range[1]} W`;
     c.pS.limits(st.power_range[0], st.power_range[1]);
     if (!c.dirty.p && st.settings.power_w != null) c.pS.set(st.settings.power_w);
     c.pPre.replaceChildren(...((st.profile && st.profile.power_presets) || []).map(p =>
-      h('button', {title: p.note||'', onclick: () => { c.pS.set(p.w); c.dirty.p = true; }}, p.label || (p.w + ' W'))),
-      h('span', {class:'gt-sub'}, `range ${st.power_range[0]}-${st.power_range[1]} W`));
+      h('button', {title: p.note || '', onclick: () => { c.pS.set(p.w); c.dirty.p = true; }}, p.label || (p.w + ' W'))));
+    c.pPre.hidden = !c.pPre.children.length;
   }
 
-  c.fPanel.hidden = !g.nfans;
+  c.F.el.hidden = !g.nfans;
   if (g.nfans) {
     const f = st.settings.fan, presets = all.curve_presets || {};
-    c.fCurve.replaceChildren(h('option',{value:''},'Current curve'), ...Object.entries(presets)
-      .filter(([,p]) => p.curve[p.curve.length-1][0] <= st.full_by_c).map(([k,p]) => h('option',{value:k,title:p.note||''}, p.label)));
+    c.F.hint.textContent = `${g.nfans} fan${g.nfans > 1 ? 's' : ''} · min ${st.fan_min} %`;
+    c.fCurve.replaceChildren(h('option', {value:''}, 'Current curve'), ...Object.entries(presets)
+      .filter(([, p]) => p.curve[p.curve.length - 1][0] <= st.full_by_c).map(([k, p]) => h('option', {value:k, title:p.note || ''}, p.label)));
     c.fS.limits(st.fan_min, 100);
     if (!c.dirty.f) { c.fMode.value = f.mode === 'unmanaged' ? 'auto' : f.mode; c.fS.set(f.manual_pct); }
     fanVis(c);
-    c.fInfo.textContent = st.fan && st.fan.floor_active ? 'Safety floor active: the card is hot, the fan is above your setting.' : (st.fan && st.fan.fault ? 'Fault: ' + st.fan.fault : '');
+    c.fInfo.textContent = st.fan && st.fan.floor_active ? 'Safety floor active: the card is hot, the fan runs above your setting.' : (st.fan && st.fan.fault ? 'Fault: ' + st.fan.fault : '');
+    c.fInfo.hidden = !c.fInfo.textContent;
   }
 
-  c.cPanel.hidden = !st.clock_range;
+  c.C.el.hidden = !st.clock_range;
   if (st.clock_range) {
+    c.C.hint.textContent = `${st.clock_range[0]}-${st.clock_range[1]} MHz`;
     c.cS.limits(st.clock_range[0], st.clock_range[1]);
     if (!c.dirty.c) {
       c.cOff.checked = st.settings.clock_cap_mhz == null;
       c.cS.set(st.settings.clock_cap_mhz ?? st.clock_range[1]);
-      c.cS.n.disabled = c.cS.r.disabled = c.cOff.checked;
     }
   }
 
-  c.panels.hidden = c.pPanel.hidden && c.fPanel.hidden && c.cPanel.hidden;
+  c.panels.hidden = c.P.el.hidden && c.F.el.hidden && c.C.el.hidden;
   c.foot.hidden = locked;
-  for (const el of c.panels.querySelectorAll('button,input,select')) if (locked) el.disabled = true;
+  for (const el of c.panels.querySelectorAll('button,input,select')) el.disabled = locked;
+  if (!locked) capLock(c);
 }
 
 function fillLive(c, s){
   s = s || {};
-  const fans = (s.fans || []).filter(x => x != null), T = c.tiles;
-  const setT = (k, text, p) => { T[k].val.textContent = text; T[k].fill.style.width = p + '%'; };
-  setT('Temperature', num(s.temp) + ' °C', pct(s.temp, 100));
+  const g = c.g, T = c.tiles, fans = (s.fans || []).filter(x => x != null);
+  const setT = (k, text, p, cap) => { T[k].val.textContent = text; T[k].fill.style.width = p + '%'; T[k].cap.textContent = cap || ''; };
+  const fan = fans.length ? Math.max(...fans) : null, slow = g.thresholds && g.thresholds.slowdown;
+  setT('Temperature', num(s.temp) + ' °C', pct(s.temp, 100), slow ? `slowdown at ${slow} °C` : '');
   T.Temperature.val.className = s.temp >= 85 ? 'bad' : s.temp >= 75 ? 'warn' : '';
-  const fan = fans.length ? Math.max(...fans) : null;
-  setT('Fan', fan == null ? '-' : num(fan) + ' %', fan || 0);
-  setT('Power', num(s.power_w) + ' W', pct(s.power_w, s.power_limit_w));
-  setT('Core clock', num(s.clock_mhz) + ' MHz', pct(s.clock_mhz, c.g.clock_max_mhz));
-  setT('Utilization', num(s.util) + ' %', s.util || 0);
-  setT('VRAM', num(s.vram_used_mib / 1024, 1) + ' GB', pct(s.vram_used_mib, s.vram_total_mib));
-  c.throttle.textContent = (s.reasons && s.reasons.length) ? 'Clock limited by: ' + s.reasons.join(', ') : '';
-  c.sub.textContent = [c.g.pci, s.pstate != null ? 'P' + s.pstate : null, s.power_limit_w != null ? 'limit ' + num(s.power_limit_w) + ' W' : null].filter(Boolean).join(' · ');
+  setT('Fan', fan == null ? '-' : num(fan) + ' %', fan || 0, fans.length > 1 ? fans.map(f => num(f)).join(' / ') + ' %' : (g.nfans ? '1 fan' : 'no fan control'));
+  setT('Power', num(s.power_w) + ' W', pct(s.power_w, s.power_limit_w), s.power_limit_w != null ? `limit ${num(s.power_limit_w)} W` : '');
+  setT('Core clock', num(s.clock_mhz) + ' MHz', pct(s.clock_mhz, g.clock_max_mhz), g.clock_max_mhz ? `max ${g.clock_max_mhz} MHz` : '');
+  setT('Utilization', num(s.util) + ' %', s.util || 0, s.mem_util != null ? `memory ${num(s.mem_util)} %` : '');
+  setT('VRAM', num(s.vram_used_mib / 1024, 1) + ' GB', pct(s.vram_used_mib, s.vram_total_mib), s.vram_total_mib ? `of ${num(s.vram_total_mib / 1024, 1)} GB` : '');
+
+  const key = (s.reasons || []).join();
+  if (key !== c.chipKey) {
+    c.chipKey = key;
+    c.chips.replaceChildren(...((s.reasons && s.reasons.length) ? s.reasons : [null]).map(k => {
+      const [text, kind] = k ? (REASON[k] || [k, 'mute']) : ['No limits active', 'ok'];
+      return h('span', {class: 'gt-chip ' + kind}, text);
+    }));
+  }
+  const pci = (g.pci || '').replace(/^0+:/, '');
+  c.sub.textContent = [pci && 'PCIe ' + pci, s.pstate != null ? 'P' + s.pstate : null, g.mem_kind === 'unified' ? 'shared memory' : null].filter(Boolean).join(' · ');
 }
 
 function applyStatus(st){
@@ -352,12 +411,14 @@ function renderTop(st, extraWarning){
   if (st.preview) kids.push(h('div', {class:'gt-note'}, 'Monitor only: the control daemon is not reachable, controls are locked.'));
   else if (st.power_settable) {
     const inp = h('input', {type:'number', step:1, value: st.budget_w ?? '', placeholder:'none'}), msg = h('span', {class:'gt-msg'});
-    const btn = h('button', {onclick: () => {
+    const btn = h('button', {class:'gt-apply', onclick: () => {
       say(msg, 'Applying...');
-      call({op:'apply', req: JSON.stringify({op:'set_budget', watts:+inp.value})}).done(r => r.ok ? (say(msg,'Budget applied.','ok'), applyStatus(r)) : say(msg, r.error||'Failed', 'err'));
+      call({op:'apply', req: JSON.stringify({op:'set_budget', watts:+inp.value})}).done(r => r.ok ? (say(msg, 'Budget applied.', 'ok'), applyStatus(r)) : say(msg, r.error || 'Failed', 'err'));
     }}, 'Apply');
-    kids.push(h('div', {class:'gt-sum'}, h('b', {}, `Total GPU power: ${num(st.budget_used_w)} W`),
-      h('span', {class:'gt-grow'}), h('label', {}, 'Combined budget'), inp, h('span', {}, 'W'), btn, msg));
+    kids.push(h('div', {class:'gt-sum'},
+      h('div', {class:'gt-total'}, h('small', {}, 'Total GPU power limit'), h('b', {}, num(st.budget_used_w) + ' W')),
+      h('span', {class:'gt-grow'}),
+      h('div', {class:'gt-bud'}, h('label', {}, 'Combined budget'), inp, h('span', {class:'gt-unit'}, 'W'), btn, msg)));
   }
   topEl.replaceChildren(...kids);
 }
@@ -379,7 +440,7 @@ function render(d){
     let c = cards[g.uuid];
     if (!c) { c = cards[g.uuid] = build(g); box.append(c.el); created = true; }
     c.g = g;
-    c.title.textContent = `GPU ${g.index}: ${g.name}`;
+    c.title.textContent = g.name;
     fillLive(c, d.live[g.uuid]);
     if (stat[g.uuid]) fillStatic(c, stat[g.uuid], d.status);
   }

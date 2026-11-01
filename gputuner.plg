@@ -81,7 +81,7 @@ exit 0
 
 <FILE Name="&dir;/GPUTuner.page">
 <URL>&raw;/source/GPUTuner.page</URL>
-<SHA256>cf35f07c8042103d9fc8b8045fbfec9a81befb98960a240e96cbb4fa4645c8c1</SHA256>
+<SHA256>741becece4344ed466739359d4d3c3154d181aef310840781438c4505995ee96</SHA256>
 </FILE>
 
 <FILE Name="&dir;/supervisor.py">
