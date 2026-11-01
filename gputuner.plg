@@ -134,7 +134,7 @@ mkdir -p /usr/local/lib/gputuner/vendor
 tar xzf &boot;/python-&pyver;.tar.gz -C /usr/local/lib/gputuner \
   --exclude="*/test" --exclude="*/idlelib" --exclude="*/ensurepip" --exclude="*/tkinter" --exclude="*/turtledemo" --exclude="*/site-packages/pip*" --exclude="python/share"
 tar xzf &boot;/upstream-&upver;.tar.gz -C /usr/local/lib/gputuner --strip-components=1 \
-  --wildcards '*/gpu_tuner' '*/gpu-tunerd'
+  --wildcards '*/gpu_tuner' '*/gpu-tunerd' '*/LICENSE'
 &py; -c "import zipfile;zipfile.ZipFile('&boot;/nvidia_ml_py-&mlver;.whl').extractall('/usr/local/lib/gputuner/vendor')"
 sed -i -e '/os\.chmod(tmp, 0o644)/d' -e '/os\.chmod(tmp, 0o600)/d' /usr/local/lib/gputuner/gpu_tuner/daemon.py
 chmod -R a+rX /usr/local/lib/gputuner
