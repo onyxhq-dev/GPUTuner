@@ -43,7 +43,7 @@ $log = trim((string)@shell_exec("tail -n 40 /var/log/gputuner.log 2>/dev/null"))
 .gt-tile b{display:block;font-size:1.45em;margin:2px 0 6px;white-space:nowrap}
 .gt-tile b.warn{color:var(--warn)}.gt-tile b.bad{color:var(--bad)}
 .gt-meter{height:5px;border-radius:3px;background:var(--soft);overflow:hidden}
-.gt-meter i{display:block;height:100%;width:0;background:var(--acc);transition:width .4s}
+.gt-meter i{display:block;height:100%;width:0;background:var(--acc);transition:width 1s linear}
 .gt-throttle{padding:6px 16px 0;font-size:.9em;opacity:.8}
 .gt-panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;padding:14px 16px}
 .gt-panel{border:1px solid var(--line);border-radius:6px;padding:10px 14px;display:flex;flex-direction:column;gap:9px}
@@ -393,6 +393,15 @@ function poll(){
 }
 poll();
 setInterval(() => { if (!document.hidden) fetchHist(); }, 10000);
+
+function livePoll(){
+  const next = () => setTimeout(livePoll, 1000);
+  if (document.hidden || !Object.keys(cards).length) return next();
+  call({op:'live'}).done(r => {
+    if (r.ok) for (const [uuid, c] of Object.entries(cards)) if (r.gpus[uuid]) fillLive(c, r.gpus[uuid]);
+  }).always(next);
+}
+livePoll();
 })();
 </script>
 <? endif; ?>

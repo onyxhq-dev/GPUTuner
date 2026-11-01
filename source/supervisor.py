@@ -7,7 +7,8 @@ ROOT = "/usr/local/lib/gputuner"
 RUN = "/run/gpu-tuner"
 SOCK = RUN + "/control.sock"
 HISTORY = RUN + "/history.jsonl"
-SAMPLE_S, KEEP = 5, 4320
+LIVE = RUN + "/live.json"
+HISTORY_EVERY, KEEP = 5, 4320
 
 
 def sampler():
@@ -17,27 +18,34 @@ def sampler():
         nv = Nvml()
     except Exception:
         return
-    n = 0
+    tick, nxt = 0, time.monotonic()
     while True:
-        row = {}
+        samples, row = {}, {}
         for g in nv.gpus:
             try:
                 s = nv.sample(g)
             except Exception:
                 continue
+            samples[g.uuid] = s
             fans = [f for f in s["fans"] if f is not None]
             row[g.uuid] = [s["temp"], max(fans) if fans else None, s["power_w"], s["power_limit_w"],
                            s["clock_mhz"], s["util"], s["vram_used_mib"], s["vram_total_mib"]]
-        with open(HISTORY, "a") as f:
-            f.write(json.dumps({"t": int(time.time()), "g": row}) + "\n")
-        n += 1
-        if n % 120 == 0:
-            with open(HISTORY) as f:
-                lines = f.readlines()[-KEEP:]
-            with open(HISTORY + ".tmp", "w") as f:
-                f.writelines(lines)
-            os.replace(HISTORY + ".tmp", HISTORY)
-        time.sleep(SAMPLE_S)
+        now = int(time.time())
+        with open(LIVE + ".tmp", "w") as f:
+            json.dump({"t": now, "gpus": samples}, f, default=str)
+        os.replace(LIVE + ".tmp", LIVE)
+        tick += 1
+        if tick % HISTORY_EVERY == 0:
+            with open(HISTORY, "a") as f:
+                f.write(json.dumps({"t": now, "g": row}) + "\n")
+            if tick % (HISTORY_EVERY * 120) == 0:
+                with open(HISTORY) as f:
+                    lines = f.readlines()[-KEEP:]
+                with open(HISTORY + ".tmp", "w") as f:
+                    f.writelines(lines)
+                os.replace(HISTORY + ".tmp", HISTORY)
+        nxt += 1
+        time.sleep(max(0, nxt - time.monotonic()))
 
 
 def main():

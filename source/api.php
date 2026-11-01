@@ -4,6 +4,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   http_response_code(405); echo '{"ok":false,"error":"POST only"}'; exit;
 }
 $op = $_POST['op'] ?? '';
+if ($op === 'live') {
+  $f = '/run/gpu-tuner/live.json';
+  clearstatcache();
+  echo (is_file($f) && time() - filemtime($f) < 10) ? '{"ok":true,' . substr(file_get_contents($f), 1) : '{"ok":false,"error":"no live data yet"}';
+  exit;
+}
 if ($op === 'history') {
   $cut = time() - max(60, min(21600, (int)($_POST['window'] ?? 900)));
   $rows = [];
