@@ -26,7 +26,7 @@
 - **Fan control**: driver default, a fixed speed or a curve preset, always above a temperature-based safety floor
 - **Core clock cap** to run cooler and quieter
 - **Combined power budget** across all cards
-- **History charts** per card (temperature and fan, power vs limit, core clock, utilization and VRAM) for the last 15 minutes, 1 hour or 6 hours
+- **History charts** per card (temperature and fan, power vs limit, core clock, utilization and VRAM) for the last 15 minutes up to 30 days, or pick any past day to look at it afterwards. History is saved across reboots (30 days, one point per minute) and can be switched off with **Save history**
 - **Reset to defaults** per card
 - **Start with array** and start/stop/restart from the same page
 - Works on phones and with Unraid themes
@@ -56,7 +56,8 @@ Updating the plugin restarts the service by itself if it was running.
 
 - A small root service applies your settings to the GPU and re-checks every change: power range, power budget and the fan safety floor. The page cannot bypass it.
 - The page talks to that service through Unraid's own authenticated web UI. Nothing listens on the network.
-- Live readings and history are sampled in RAM. Nothing is written to the flash drive except your saved settings (`/boot/config/plugins/gputuner/data`, two small JSON files).
+- Live readings and the last 6 hours of history (every 5 seconds) are kept in RAM.
+- Saved history is gentle on the flash drive: per-minute averages are written in one batch every 10 minutes and when the service stops (about 150 small writes a day, roughly 5 MB for 30 days), and files older than 30 days are deleted. It lives in `/boot/config/plugins/gputuner/data/history`, one file per day, next to your saved settings. Turn **Save history** off to stop writing it.
 - Stopping the service, or the array, hands fan control back to the NVIDIA driver. Power limits stay applied.
 
 ## Notes
@@ -64,7 +65,7 @@ Updating the plugin restarts the service by itself if it was running.
 - GPUs passed through to a VM are not available to the plugin.
 - Only run one GPU tuner at a time, so do not run it together with a container that does the same.
 - Some cards are monitor-only (no fan or clock controls). The page locks those controls.
-- History is kept in RAM, so it starts empty after a reboot.
+- A power loss can lose up to the last 10 minutes of saved history. Ranges longer than 6 hours show per-minute averages, so very short spikes are smoothed out.
 
 ## Uninstall
 
@@ -73,7 +74,7 @@ Go to **Plugins**, find GPUTuner, and click **Remove**. Your saved settings stay
 ## Requirements
 
 - Unraid 6.12 or later (x86_64) with the NVIDIA Driver plugin
-- About 35 MB of flash for the cached download and about 90 MB of RAM for the unpacked copy (recreated on every boot)
+- About 40 MB of flash (35 MB cached download plus up to about 5 MB of saved history) and about 90 MB of RAM for the unpacked copy (recreated on every boot)
 
 ## Development
 

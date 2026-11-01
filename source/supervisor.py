@@ -6,9 +6,60 @@ DATA = "/boot/config/plugins/gputuner/data"
 ROOT = "/usr/local/lib/gputuner"
 RUN = "/run/gpu-tuner"
 SOCK = RUN + "/control.sock"
+CFG = "/boot/config/plugins/gputuner/gputuner.cfg"
 HISTORY = RUN + "/history.jsonl"
 LIVE = RUN + "/live.json"
+SAVED = DATA + "/history"
 HISTORY_EVERY, KEEP = 5, 4320
+FLUSH_EVERY, RETENTION_DAYS = 120, 30
+
+lock = threading.Lock()
+minute, pending = [], []
+
+
+def save_enabled():
+    try:
+        return 'HISTORY="disable"' not in open(CFG).read()
+    except OSError:
+        return True
+
+
+def average(rows):
+    out = {}
+    for u in rows[-1]["g"]:
+        cols = [r["g"][u] for r in rows if u in r["g"]]
+        vals = []
+        for i in range(8):
+            xs = [c[i] for c in cols if c[i] is not None]
+            vals.append(None if not xs else xs[-1] if i == 7 else round(sum(xs) / len(xs), 1))
+        out[u] = vals
+    return {"t": rows[-1]["t"], "g": out}
+
+
+def flush_history(final=False):
+    with lock:
+        if final and minute:
+            pending.append(average(minute))
+            minute.clear()
+        rows, pending[:] = pending[:], []
+    if not rows or not save_enabled():
+        return
+    try:
+        os.makedirs(SAVED, exist_ok=True)
+        days = {}
+        for r in rows:
+            days.setdefault(time.strftime("%Y-%m-%d", time.gmtime(r["t"])), []).append(r)
+        for day, rs in days.items():
+            with open(f"{SAVED}/{day}.jsonl", "a") as f:
+                f.write("".join(json.dumps(r) + "\n" for r in rs))
+                f.flush()
+                os.fsync(f.fileno())
+        cutoff = time.strftime("%Y-%m-%d", time.gmtime(time.time() - RETENTION_DAYS * 86400))
+        for name in os.listdir(SAVED):
+            if name[:10] < cutoff:
+                os.remove(f"{SAVED}/{name}")
+    except OSError:
+        pass
 
 
 def sampler():
@@ -36,14 +87,22 @@ def sampler():
         os.replace(LIVE + ".tmp", LIVE)
         tick += 1
         if tick % HISTORY_EVERY == 0:
+            rec = {"t": now, "g": row}
             with open(HISTORY, "a") as f:
-                f.write(json.dumps({"t": now, "g": row}) + "\n")
+                f.write(json.dumps(rec) + "\n")
+            with lock:
+                minute.append(rec)
+                if len(minute) >= 12:
+                    pending.append(average(minute))
+                    minute.clear()
             if tick % (HISTORY_EVERY * 120) == 0:
                 with open(HISTORY) as f:
                     lines = f.readlines()[-KEEP:]
                 with open(HISTORY + ".tmp", "w") as f:
                     f.writelines(lines)
                 os.replace(HISTORY + ".tmp", HISTORY)
+            if tick % (HISTORY_EVERY * FLUSH_EVERY) == 0:
+                flush_history()
         nxt += 1
         time.sleep(max(0, nxt - time.monotonic()))
 
@@ -73,6 +132,7 @@ def main():
                 daemon.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 daemon.kill()
+        flush_history(final=True)
         subprocess.run(cmd + ["--restore-fans"], env=env, timeout=15)
     sys.exit(rc if rc > 0 else 0)
 

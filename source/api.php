@@ -11,25 +11,50 @@ if ($op === 'live') {
   exit;
 }
 if ($op === 'history') {
-  $cut = time() - max(60, min(21600, (int)($_POST['window'] ?? 900)));
-  $rows = [];
+  $to = isset($_POST['to']) ? (int)$_POST['to'] : time();
+  $from = isset($_POST['from']) ? (int)$_POST['from'] : $to - max(60, (int)($_POST['window'] ?? 900));
+  $from = max($from, $to - 31 * 86400);
+  if ($from >= $to) { echo '{"ok":false,"error":"bad range"}'; exit; }
+  $ram = [];
   foreach (@file('/run/gpu-tuner/history.jsonl', FILE_IGNORE_NEW_LINES) ?: [] as $line) {
     $r = json_decode($line, true);
-    if (is_array($r) && $r['t'] >= $cut) $rows[] = $r;
+    if (is_array($r)) $ram[] = $r;
   }
-  $out = ['ok' => true, 't' => [], 'gpus' => []];
-  if ($rows) {
-    $uuids = array_keys(end($rows)['g']);
-    $step = max(1, (int)ceil(count($rows) / 300));
-    $names = ['temp', 'fan', 'power', 'limit', 'clock', 'util'];
-    for ($i = 0; $i < count($rows); $i += $step) {
-      $out['t'][] = $rows[$i]['t'];
-      foreach ($uuids as $u) {
-        $v = $rows[$i]['g'][$u] ?? array_fill(0, 8, null);
-        foreach ($names as $k => $name) $out['gpus'][$u][$name][] = $v[$k];
-        $out['gpus'][$u]['vram'][] = !empty($v[7]) ? round($v[6] / $v[7] * 100, 1) : null;
+  $firstRam = $ram ? $ram[0]['t'] : PHP_INT_MAX;
+  $rows = [];
+  if ($from < $firstRam) {
+    for ($d = (int)floor($from / 86400) * 86400; $d <= $to; $d += 86400) {
+      $f = '/boot/config/plugins/gputuner/data/history/' . gmdate('Y-m-d', $d) . '.jsonl';
+      foreach (is_file($f) ? file($f, FILE_IGNORE_NEW_LINES) : [] as $line) {
+        $r = json_decode($line, true);
+        if (is_array($r) && $r['t'] >= $from && $r['t'] <= $to && $r['t'] < $firstRam) $rows[] = $r;
       }
     }
+  }
+  foreach ($ram as $r) if ($r['t'] >= $from && $r['t'] <= $to) $rows[] = $r;
+  $n = max(1, min(300, (int)floor(($to - $from) / 5)));
+  $w = ($to - $from) / $n;
+  $names = ['temp', 'fan', 'power', 'limit', 'clock', 'util', 'vram'];
+  $uuids = $rows ? array_keys(end($rows)['g']) : [];
+  $acc = [];
+  foreach ($rows as $r) {
+    $i = min($n - 1, (int)floor(($r['t'] - $from) / $w));
+    foreach ($uuids as $u) {
+      $v = $r['g'][$u] ?? null;
+      if (!$v) continue;
+      $v[6] = !empty($v[7]) ? $v[6] / $v[7] * 100 : null;
+      foreach ($names as $k => $name) {
+        if ($v[$k] === null) continue;
+        $acc[$u][$name][$i][0] = ($acc[$u][$name][$i][0] ?? 0) + $v[$k];
+        $acc[$u][$name][$i][1] = ($acc[$u][$name][$i][1] ?? 0) + 1;
+      }
+    }
+  }
+  $out = ['ok' => true, 't' => [], 'gpus' => []];
+  for ($i = 0; $i < $n; $i++) $out['t'][] = (int)round($from + ($i + 0.5) * $w);
+  foreach ($uuids as $u) foreach ($names as $name) for ($i = 0; $i < $n; $i++) {
+    $c = $acc[$u][$name][$i] ?? null;
+    $out['gpus'][$u][$name][] = $c ? round($c[0] / $c[1], 1) : null;
   }
   echo json_encode($out); exit;
 }

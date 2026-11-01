@@ -4,14 +4,15 @@ Icon="GPUTuner.png"
 ---
 <?
 $cfgf = "/boot/config/plugins/gputuner/gputuner.cfg";
-$c = array_merge(["SERVICE"=>"disable"], @parse_ini_file($cfgf) ?: []);
+$c = array_merge(["SERVICE"=>"disable","HISTORY"=>"enable"], @parse_ini_file($cfgf) ?: []);
 $rc = "/usr/local/emhttp/plugins/GPUTuner/rc.gputuner";
 $msg = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $a = $_POST['action'] ?? '';
   if ($a === 'save') {
     $c['SERVICE'] = ($_POST['SERVICE'] ?? '') === 'enable' ? 'enable' : 'disable';
-    file_put_contents($cfgf, "SERVICE=\"{$c['SERVICE']}\"\n");
+    $c['HISTORY'] = ($_POST['HISTORY'] ?? '') === 'disable' ? 'disable' : 'enable';
+    file_put_contents($cfgf, "SERVICE=\"{$c['SERVICE']}\"\nHISTORY=\"{$c['HISTORY']}\"\n");
     $msg = "Saved.";
   } elseif (in_array($a, ['start','stop','restart'])) {
     $msg = htmlspecialchars(trim((string)shell_exec("$rc $a 2>&1")));
@@ -87,6 +88,8 @@ $log = trim((string)@shell_exec("tail -n 40 /var/log/gputuner.log 2>/dev/null"))
 
 .gt-histbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px 0;border-top:1px solid var(--line)}
 .gt-histbar h4{margin:0}
+.gt-histctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.gt-histctl input[type=date]{height:28px;padding:0 6px}
 .gt-seg{display:inline-flex}
 .gt-seg button{border-radius:0;margin-left:-1px;border:1px solid var(--line);background:transparent;color:inherit;height:28px;padding:0 14px}
 .gt-seg button:first-child{border-radius:5px 0 0 5px;margin-left:0}
@@ -116,7 +119,9 @@ $log = trim((string)@shell_exec("tail -n 40 /var/log/gputuner.log 2>/dev/null"))
   <span class="gt-grow"></span>
   <form method="post">
     <input type="hidden" name="csrf_token" value="<?=$tok?>"><input type="hidden" name="action" value="save">
-    <label for="gt-auto">Start with array</label>
+    <label for="gt-hist">Save history</label>
+    <select id="gt-hist" name="HISTORY" onchange="this.form.submit()" title="Keeps 30 days of per-minute history on the flash drive"><option value="enable">Yes</option><option value="disable" <?=$c['HISTORY']=='disable'?'selected':''?>>No</option></select>
+    <label for="gt-auto" style="margin-left:10px">Start with array</label>
     <select id="gt-auto" name="SERVICE" onchange="this.form.submit()"><option value="disable">No</option><option value="enable" <?=$c['SERVICE']=='enable'?'selected':''?>>Yes</option></select>
   </form>
 </div>
@@ -192,15 +197,16 @@ function panel(title){
     el: h('div', {class:'gt-panel'}, h('div', {class:'gt-ph'}, h('h4', {}, title), hint), body, h('div', {class:'gt-pf'}, msg, btn))};
 }
 
-const WINDOWS = [[900, '15 min'], [3600, '1 hour'], [21600, '6 hours']];
+const WINDOWS = [[900, '15 min'], [3600, '1 hour'], [21600, '6 hours'], [86400, '24 hours'], [604800, '7 days'], [2592000, '30 days']];
 const CHARTS = [
   {title: 'Temperature & fan', max: 100, series: [{k:'temp', label:'Temp', unit:'°C', color:'#ff8c2f'}, {k:'fan', label:'Fan', unit:'%', color:'#3b9cff'}]},
   {title: 'Power', series: [{k:'power', label:'Draw', unit:'W', color:'#ff8c2f'}, {k:'limit', label:'Limit', unit:'W', color:'#3b9cff', dash:true}]},
   {title: 'Core clock', series: [{k:'clock', label:'Clock', unit:'MHz', color:'#2ea44f'}]},
   {title: 'Utilization & VRAM', max: 100, series: [{k:'util', label:'GPU', unit:'%', color:'#a371f7'}, {k:'vram', label:'VRAM', unit:'%', color:'#3b9cff'}]},
 ];
-let histWin = 900;
+let histWin = 900, histDay = null;
 try { histWin = +localStorage.getItem('gt-win') || 900; } catch (e) {}
+if (!WINDOWS.some(w => w[0] === histWin)) histWin = 900;
 
 function legend(ch, d){
   ch.legend.replaceChildren(h('b', {}, ch.def.title), ...ch.def.series.map(s => {
@@ -217,9 +223,13 @@ function drawChart(ch, t, d){
   const x = cv.getContext('2d'); x.scale(dpr, dpr);
   x.font = '10px sans-serif'; x.fillStyle = getComputedStyle(cv).color;
   legend(ch, d);
-  if (!t || t.length < 2) { x.textAlign = 'center'; x.globalAlpha = .7; x.fillText('Collecting data...', W / 2, H / 2); return; }
+  const all = ch.def.series.flatMap(s => ((d || {})[s.k] || []).filter(v => v != null));
+  if (!t || t.length < 2 || !all.length) {
+    x.textAlign = 'center'; x.globalAlpha = .7;
+    x.fillText(histDay || histWin > 21600 ? 'No data for this period' : 'Collecting data...', W / 2, H / 2);
+    return;
+  }
   const padL = 34, padR = 4, padT = 6, padB = 16, pw = W - padL - padR, ph = H - padT - padB;
-  const all = ch.def.series.flatMap(s => (d[s.k] || []).filter(v => v != null));
   const top = Math.max(1, ...all) * 1.05, pow = Math.pow(10, Math.floor(Math.log10(top)));
   const max = ch.def.max || [1, 2, 2.5, 4, 5, 8, 10].map(m => m * pow).find(v => v >= top);
   const t0 = t[0], span = Math.max(1, t[t.length - 1] - t0);
@@ -231,39 +241,56 @@ function drawChart(ch, t, d){
     x.beginPath(); x.moveTo(padL, y); x.lineTo(W - padR, y); x.stroke();
     x.fillText(Math.round(v), padL - 4, y + 3);
   }
+  const p2 = n => String(n).padStart(2, '0');
+  const label = ts => {
+    const dt = new Date(ts * 1000), md = p2(dt.getMonth() + 1) + '-' + p2(dt.getDate()), hm = p2(dt.getHours()) + ':' + p2(dt.getMinutes());
+    return span > 4 * 86400 ? md : span > 86400 ? md + ' ' + hm : hm;
+  };
   for (let i = 0; i <= 3; i++) {
-    const ts = t0 + span * i / 3, dt = new Date(ts * 1000);
     x.textAlign = i === 0 ? 'left' : i === 3 ? 'right' : 'center';
-    x.fillText(dt.toTimeString().slice(0, 5), padL + pw * i / 3, H - 3);
+    x.fillText(label(t0 + span * i / 3), padL + pw * i / 3, H - 3);
   }
   x.globalAlpha = 1;
-  const dts = t.slice(1).map((v, i) => v - t[i]).sort((a, b) => a - b);
-  const gap = Math.max(30, (dts[dts.length >> 1] || 5) * 4);
+  const gap = Math.max(30, (t[1] - t[0]) * 3);
   for (const s of ch.def.series) {
     x.strokeStyle = s.color; x.lineWidth = 1.6; x.setLineDash(s.dash ? [5, 4] : []);
     x.beginPath();
-    let pen = false;
+    let pen = false, last = null;
     (d[s.k] || []).forEach((v, i) => {
-      if (v == null) { pen = false; return; }
-      if (i > 0 && t[i] - t[i - 1] > gap) pen = false;
+      if (v == null) return;
+      if (last != null && t[i] - t[last] > gap) pen = false;
       if (pen) x.lineTo(X(t[i]), Y(v)); else { x.moveTo(X(t[i]), Y(v)); pen = true; }
+      last = i;
     });
     x.stroke();
   }
   x.setLineDash([]);
 }
 
+function histRequest(){
+  if (!histDay) return {window: histWin};
+  const [y, m, d] = histDay.split('-').map(Number);
+  return {from: Math.floor(new Date(y, m - 1, d).getTime() / 1000), to: Math.floor(new Date(y, m - 1, d + 1).getTime() / 1000)};
+}
+
 function fetchHist(){
-  call({op:'history', window: histWin}).done(r => {
+  call(Object.assign({op:'history'}, histRequest())).done(r => {
     if (!r.ok) return;
     for (const [uuid, c] of Object.entries(cards)) for (const ch of c.charts) drawChart(ch, r.t, (r.gpus || {})[uuid] || {});
   });
 }
 
 function setWin(w){
-  histWin = w;
+  histWin = w; histDay = null;
   try { localStorage.setItem('gt-win', String(w)); } catch (e) {}
-  for (const c of Object.values(cards)) c.winBtns.forEach(([ws, b]) => b.classList.toggle('on', ws === w));
+  for (const c of Object.values(cards)) { c.winBtns.forEach(([ws, b]) => b.classList.toggle('on', ws === w)); c.dayIn.value = ''; }
+  fetchHist();
+}
+
+function setDay(v){
+  if (!v) return setWin(histWin);
+  histDay = v;
+  for (const c of Object.values(cards)) { c.winBtns.forEach(([, b]) => b.classList.remove('on')); c.dayIn.value = v; }
   fetchHist();
 }
 
@@ -310,13 +337,15 @@ function build(g){
   c.rBtn = h('button', {onclick: () => { if (confirm('Reset fan curve, clock cap and power limit to safe defaults?')) send(c, 'r', {op:'baseline', uuid:g.uuid}, c.rMsg, 'Reset to defaults.'); }}, 'Reset to defaults');
   c.foot = h('div', {class:'gt-foot'}, c.rBtn, c.rMsg);
 
-  c.winBtns = WINDOWS.map(([w, label]) => [w, h('button', {class: w === histWin ? 'on' : '', onclick: () => setWin(w)}, label)]);
+  c.winBtns = WINDOWS.map(([w, label]) => [w, h('button', {class: !histDay && w === histWin ? 'on' : '', onclick: () => setWin(w)}, label)]);
+  c.dayIn = h('input', {type:'date', title:'Look at a past day', max: new Date().toLocaleDateString('sv-SE'), value: histDay || '', onchange: () => setDay(c.dayIn.value)});
   c.charts = CHARTS.map(def => {
     const lg = h('h5'), canvas = h('canvas');
     return {def, legend: lg, canvas, el: h('div', {class:'gt-chart'}, lg, canvas)};
   });
   c.el = h('div', {class:'gt-card'}, head, tl, c.panels, c.foot,
-    h('div', {class:'gt-histbar'}, h('h4', {}, 'History'), h('div', {class:'gt-seg'}, ...c.winBtns.map(x => x[1]))),
+    h('div', {class:'gt-histbar'}, h('h4', {}, 'History'),
+      h('div', {class:'gt-histctl'}, h('div', {class:'gt-seg'}, ...c.winBtns.map(x => x[1])), h('label', {class:'gt-sub'}, 'or day'), c.dayIn)),
     h('div', {class:'gt-hist'}, ...c.charts.map(ch => ch.el)));
   for (const ch of c.charts) legend(ch, null);
   return c;

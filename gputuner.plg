@@ -90,12 +90,12 @@ exit 0
 
 <FILE Name="&dir;/GPUTuner.page">
 <URL>&raw;/source/GPUTuner.page</URL>
-<SHA256>741becece4344ed466739359d4d3c3154d181aef310840781438c4505995ee96</SHA256>
+<SHA256>667956a76f1e41f4a5ef06a3cc91ccd16a408dd2946617ca80ac009142843834</SHA256>
 </FILE>
 
 <FILE Name="&dir;/supervisor.py">
 <URL>&raw;/source/supervisor.py</URL>
-<SHA256>65f93c223e00ce6d375139920fbd2d25e086074a77f61a136e38b9ecfaf1184b</SHA256>
+<SHA256>4737128755e1d9dbc88f29b4888cd7b457e1b78798736da8a5112f8b1e87a5d8</SHA256>
 </FILE>
 
 <FILE Name="&dir;/api.py">
@@ -105,7 +105,7 @@ exit 0
 
 <FILE Name="&dir;/api.php">
 <URL>&raw;/source/api.php</URL>
-<SHA256>94e315f58a966448bbec8f05e5e52dbf9e82421f1b9317736c2ff8d8bd3c045d</SHA256>
+<SHA256>48fe15c9ccc4a377f3638453a49e5d0f6e4f23d2054561f3259896882bc28b07</SHA256>
 </FILE>
 
 <FILE Name="&dir;/rc.gputuner">
