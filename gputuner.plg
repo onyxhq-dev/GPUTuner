@@ -48,7 +48,10 @@
 
 <FILE Run="/bin/bash">
 <INLINE>
-[ -x &dir;/rc.gputuner ] &amp;&amp; &dir;/rc.gputuner stop 2&gt;/dev/null
+if [ -x &dir;/rc.gputuner ] &amp;&amp; &dir;/rc.gputuner status &gt;/dev/null 2&gt;&amp;1; then
+  touch /var/run/gputuner.restart
+  &dir;/rc.gputuner stop 2&gt;/dev/null
+fi
 rm -rf &dir; /usr/local/lib/gputuner
 mkdir -p &dir;/event &dir;/images &boot;
 exit 0
@@ -135,7 +138,10 @@ if [ -d $OLD/state ] &amp;&amp; [ ! -d &boot;/data ]; then
   mkdir -p &boot;/data &amp;&amp; cp -r $OLD/config $OLD/state &boot;/data/
 fi
 
-grep -q '^SERVICE="enable"' &boot;/gputuner.cfg &amp;&amp; &dir;/rc.gputuner start || true
+if [ -f /var/run/gputuner.restart ] || grep -q '^SERVICE="enable"' &boot;/gputuner.cfg; then
+  &dir;/rc.gputuner start || true
+fi
+rm -f /var/run/gputuner.restart
 
 echo "----------------------------------------------------"
 echo " GPUTuner installed successfully."

@@ -3,7 +3,7 @@ name: version-bump
 on:
   push:
     branches: [master]
-    paths: ['source/**', 'assets/**']
+    paths: ['source/**', 'assets/**', 'gputuner.plg']
   workflow_dispatch:
 
 permissions:
