@@ -2,10 +2,10 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "GPUTuner">
 <!ENTITY author    "onyxhq-dev">
-<!ENTITY version   "2026.11.01p">
+<!ENTITY version   "2026.11.01q">
 <!ENTITY launch    "Settings/GPUTuner">
-<!ENTITY pluginURL "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/rust/gputuner.plg">
-<!ENTITY raw       "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/rust">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master/gputuner.plg">
+<!ENTITY raw       "https://raw.githubusercontent.com/onyxhq-dev/GPUTuner/master">
 <!ENTITY dir       "/usr/local/emhttp/plugins/GPUTuner">
 <!ENTITY boot      "/boot/config/plugins/gputuner">
 <!ENTITY binsha    "25c3e88ccbb32eb4bae052bbf5392576578b2d22ff017a80f2aa19fcba713fed">
@@ -14,6 +14,9 @@
 
 <CHANGES>
 ## GPUTuner - NVIDIA GPU power, fan and clock control for Unraid
+## 2026.11.01q
+- README: native binary footprint
+
 ## 2026.11.01p
 - Rewrite the service in Rust: one native binary, about 3 MB of RAM, no Python
 
