@@ -2,7 +2,7 @@
 <Plugin>
   <Name>GPUTuner</Name>
   <Author>onyxhq-dev</Author>
-  <Version>2026.11.01h</Version>
+  <Version>2026.11.01i</Version>
   <Category>Tools:</Category>
   <Overview>Native plugin version of GPU Tuner for NVIDIA cards: set the power limit, fan curve and core clock cap per GPU from a page inside the Unraid UI (no separate web UI or password), with a combined power budget and safety floors. No Docker needed. Requires the NVIDIA Driver plugin. Based on 0sy/gpu-tuner-unraid and willboyden/gpu-tuner (both MIT).</Overview>
   <Description>NVIDIA GPU power, fan and clock control inside the Unraid UI, as a plugin.</Description>
