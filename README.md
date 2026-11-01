@@ -22,6 +22,7 @@ The daemon code is downloaded at install time (pinned and checksummed).
 - **Power limit** within the card's own NVML range, with presets where a profile exists, plus an optional combined GPU power budget
 - **Fan control** - driver default, fixed speed or a curve preset, always above a temperature-based safety floor
 - **Core clock cap** to run cooler and quieter
+- **History charts** per card (temperature and fan, power vs limit, core clock, utilization and VRAM) for the last 15 minutes, 1 hour or 6 hours, sampled every 5 seconds into RAM (nothing is written to the flash drive, and history resets on reboot)
 - **Reset to defaults** per card
 - **Start with array**, start/stop/restart from the same page
 - Every change is validated by the root daemon, not the page. Stopping the service (or the array) hands fan control back to the NVIDIA driver; power caps stay applied
