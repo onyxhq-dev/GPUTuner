@@ -14,55 +14,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     file_put_contents($cfgf, "SERVICE=\"{$c['SERVICE']}\"\n");
     $msg = "Saved.";
   } elseif (in_array($a, ['start','stop','restart'])) {
-    $msg = htmlspecialchars(shell_exec("$rc $a 2>&1"));
+    $msg = htmlspecialchars(trim((string)shell_exec("$rc $a 2>&1")));
   }
 }
 exec("$rc status", $o, $st); $up = ($st === 0);
 $tok = htmlspecialchars($var['csrf_token']);
+$log = trim((string)@shell_exec("tail -n 40 /var/log/gputuner.log 2>/dev/null"));
 ?>
 <style>
-.gt-card{border:1px solid rgba(128,128,128,.4);border-radius:6px;padding:12px 16px;margin:12px 0}
-.gt-card h3{margin:0 0 6px}
-.gt-live{display:flex;flex-wrap:wrap;gap:6px 22px;margin:6px 0 10px}
-.gt-live span b{display:block;font-size:1.3em}
-.gt-grp{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}
-.gt-grp label{min-width:110px;font-weight:bold}
-.gt-grp input[type=number]{width:90px}
-.gt-msg{opacity:.8;font-size:.9em}
-.gt-err{color:#e22}
-.gt-warn{border-left:4px solid #e90;padding:4px 10px;margin:8px 0}
+.gt{--line:rgba(128,128,128,.35);--soft:rgba(128,128,128,.12);--ok:#2ea44f;--warn:#e9a100;--bad:#e5484d;--acc:#ff8c2f}
+.gt [hidden]{display:none!important}
+.gt button,.gt select,.gt input{margin:0}
+.gt input[type=number]{width:84px}
+.gt input[type=range]{flex:1;min-width:90px;padding:0}
+.gt-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 16px;border:1px solid var(--line);border-radius:8px;margin:0 0 16px}
+.gt-bar form{display:flex;align-items:center;gap:8px;margin:0}
+.gt-pill{display:inline-flex;align-items:center;gap:7px;font-weight:bold;padding:3px 12px;border-radius:99px;background:var(--soft)}
+.gt-pill::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--bad)}
+.gt-pill.on::before{background:var(--ok)}
+.gt-grow{flex:1}
+.gt-card{border:1px solid var(--line);border-radius:8px;margin:0 0 16px;overflow:hidden}
+.gt-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:12px 16px;background:var(--soft)}
+.gt-head h3{margin:0;font-size:1.25em}
+.gt-sub{opacity:.7;font-size:.9em}
+.gt-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;padding:14px 16px 4px}
+.gt-tile{border:1px solid var(--line);border-radius:6px;padding:8px 12px}
+.gt-tile small{display:block;opacity:.7;text-transform:uppercase;letter-spacing:.04em;font-size:.72em}
+.gt-tile b{display:block;font-size:1.45em;margin:2px 0 6px;white-space:nowrap}
+.gt-tile b.warn{color:var(--warn)}.gt-tile b.bad{color:var(--bad)}
+.gt-meter{height:5px;border-radius:3px;background:var(--soft);overflow:hidden}
+.gt-meter i{display:block;height:100%;width:0;background:var(--acc);transition:width .4s}
+.gt-throttle{padding:6px 16px 0;font-size:.9em;opacity:.8}
+.gt-panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;padding:14px 16px}
+.gt-panel{border:1px solid var(--line);border-radius:6px;padding:10px 14px;display:flex;flex-direction:column;gap:9px}
+.gt-panel h4{margin:0;font-size:1em}
+.gt-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.gt-row label{font-weight:normal}
+.gt-chips{display:flex;flex-wrap:wrap;gap:6px}
+.gt-chips button{padding:2px 10px;font-size:.85em}
+.gt-msg{opacity:.8;font-size:.88em;min-height:1.2em}
+.gt-err{color:var(--bad);opacity:1}
+.gt-ok{color:var(--ok);opacity:1}
+.gt-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:0 16px 14px}
+.gt-note{border-left:4px solid var(--warn);padding:6px 12px;margin:0 0 12px;background:var(--soft);border-radius:0 6px 6px 0}
+.gt-sum{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 16px;border:1px solid var(--line);border-radius:8px;margin:0 0 16px}
+.gt details{margin:8px 0 16px}
+.gt pre{max-height:260px;overflow:auto;padding:10px;border:1px solid var(--line);border-radius:6px;white-space:pre-wrap}
 </style>
 
-<? if ($msg): ?><p><b><?=$msg?></b></p><? endif; ?>
+<div class="gt">
 
-<form method="post" style="display:inline">
-<input type="hidden" name="csrf_token" value="<?=$tok?>">
-Status: <b><?=$up ? 'running' : 'stopped'?></b>&nbsp;
-<? foreach (['start','stop','restart'] as $b): ?>
-<button name="action" value="<?=$b?>"><?=ucfirst($b)?></button>
-<? endforeach; ?>
-</form>
+<div class="gt-bar">
+  <span class="gt-pill <?=$up ? 'on' : ''?>"><?=$up ? 'Running' : 'Stopped'?></span>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="<?=$tok?>">
+    <? foreach (['start','stop','restart'] as $b): ?>
+    <button name="action" value="<?=$b?>"<?=($b === 'start' && $up) || ($b === 'stop' && !$up) ? ' disabled' : ''?>><?=ucfirst($b)?></button>
+    <? endforeach; ?>
+  </form>
+  <span class="gt-grow"></span>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="<?=$tok?>"><input type="hidden" name="action" value="save">
+    <label for="gt-auto">Start with array</label>
+    <select id="gt-auto" name="SERVICE" onchange="this.form.submit()"><option value="disable">No</option><option value="enable" <?=$c['SERVICE']=='enable'?'selected':''?>>Yes</option></select>
+  </form>
+</div>
 
-<form method="post">
-<input type="hidden" name="csrf_token" value="<?=$tok?>"><input type="hidden" name="action" value="save">
-<dl>
-<dt>Start with array:</dt><dd><select name="SERVICE"><option value="disable">No</option><option value="enable" <?=$c['SERVICE']=='enable'?'selected':''?>>Yes</option></select></dd>
-</dl>
-<input type="submit" value="Apply">
-</form>
+<? if ($msg): ?><div class="gt-note"><?=$msg?></div><? endif; ?>
 
-<? $log = trim((string)@shell_exec("tail -n 30 /var/log/gputuner.log 2>/dev/null")); if ($log !== ''): ?>
-<details<?=$up ? '' : ' open'?>><summary>Log</summary><pre><?=htmlspecialchars($log)?></pre></details>
-<? endif; ?>
-
-<hr>
 <? if (!$up): ?>
-<p>The service is stopped. Start it to see and control your GPUs. Needs the NVIDIA Driver plugin.</p>
+<p>The service is stopped. Press <b>Start</b> to see and control your GPUs. Requires the NVIDIA Driver plugin.</p>
 <? else: ?>
 <div id="gt-top"></div>
 <div id="gt-gpus"><p>Loading...</p></div>
-<p class="gt-msg">Changes act on the real GPU and are checked by the root daemon (power range, power budget, fan safety floor). Stopping the service hands fans back to the driver; power caps stay applied.</p>
+<p class="gt-sub">Changes act on the real GPU and are checked by the root daemon (power range, budget, fan safety floor). Stopping the service hands fans back to the driver; power limits stay applied.</p>
+<? endif; ?>
 
+<? if ($log !== ''): ?>
+<details<?=$up ? '' : ' open'?>><summary>Service log</summary><pre><?=htmlspecialchars($log)?></pre></details>
+<? endif; ?>
+
+</div>
+
+<? if ($up): ?>
 <script>
 (function(){
 const CSRF = <?=json_encode($var['csrf_token'])?>, API = '/plugins/GPUTuner/api.php';
@@ -77,95 +111,139 @@ function h(tag, attrs, ...kids){
 }
 const call = body => $.post(API, Object.assign({csrf_token: CSRF}, body), null, 'json');
 const num = (v, d=0) => (v==null || isNaN(v)) ? '-' : (+v).toFixed(d);
+const pct = (a, b) => (a==null || !b) ? 0 : Math.max(0, Math.min(100, a / b * 100));
 
-function say(el, text, bad){ el.textContent = text; el.className = 'gt-msg' + (bad ? ' gt-err' : ''); }
+function say(el, text, kind){ el.textContent = text; el.className = 'gt-msg' + (kind ? ' gt-' + kind : ''); }
 
 function send(card, group, req, msgEl, okText){
   say(msgEl, 'Applying...');
   call({op:'apply', req: JSON.stringify(req)}).done(r => {
-    if (r.ok) { card.dirty[group] = false; say(msgEl, okText); applyStatus(r); }
+    if (r.ok) { card.dirty[group] = false; say(msgEl, okText, 'ok'); applyStatus(r); }
     else if (r.over_budget && req.op==='set_power' && !req.confirm_override &&
              confirm((r.error||'Over the power budget.') + '\n\nApply anyway?')) send(card, group, {...req, confirm_override:true}, msgEl, okText);
-    else say(msgEl, r.error || 'Failed', true);
-  }).fail(() => say(msgEl, 'Request failed', true));
+    else say(msgEl, r.error || 'Failed', 'err');
+  }).fail(() => say(msgEl, 'Request failed', 'err'));
+}
+
+function tile(label){
+  const val = h('b'), fill = h('i'), el = h('div', {class:'gt-tile'}, h('small', {}, label), val, h('div', {class:'gt-meter'}, fill));
+  return {el, val, fill};
+}
+
+function slider(min, max, step, onchange){
+  const n = h('input', {type:'number', step}), r = h('input', {type:'range', step});
+  n.oninput = () => { r.value = n.value; onchange(); };
+  r.oninput = () => { n.value = r.value; onchange(); };
+  const set = (v) => { n.value = r.value = v; };
+  const limits = (a, b) => { n.min = r.min = a; n.max = r.max = b; };
+  return {n, r, set, limits};
 }
 
 function build(g){
   const c = {dirty:{}, uuid:g.uuid, g};
   const dirty = grp => () => { c.dirty[grp] = true; };
-  c.title = h('h3'); c.live = h('div', {class:'gt-live'});
-  c.liveEls = {};
-  for (const k of ['Temp','Fan','Power','Core','Util','VRAM','Limits']) { c.liveEls[k] = h('b'); c.live.append(h('span', {}, k, c.liveEls[k])); }
 
-  c.pIn = h('input', {type:'number', step:1, oninput: dirty('p')}); c.pPre = h('span');
-  c.pMsg = h('span', {class:'gt-msg'});
-  c.pBtn = h('button', {onclick: () => send(c,'p',{op:'set_power',uuid:g.uuid,watts:+c.pIn.value}, c.pMsg, 'Power limit applied.')}, 'Apply');
-  c.pRow = h('div', {class:'gt-grp'}, h('label',{},'Power limit (W)'), c.pIn, c.pBtn, c.pPre, c.pMsg);
+  c.title = h('h3'); c.sub = h('span', {class:'gt-sub'});
+  c.tiles = {};
+  const tl = h('div', {class:'gt-tiles'});
+  for (const k of ['Temperature','Fan','Power','Core clock','Utilization','VRAM']) { c.tiles[k] = tile(k); tl.append(c.tiles[k].el); }
+  c.throttle = h('div', {class:'gt-throttle'});
 
-  c.fMode = h('select', {onchange: dirty('f')}, h('option',{value:'auto'},'Driver default'), h('option',{value:'curve'},'Curve'), h('option',{value:'manual'},'Fixed speed'));
+  c.pS = slider(0, 0, 1, dirty('p')); c.pPre = h('div', {class:'gt-chips'}); c.pMsg = h('div', {class:'gt-msg'});
+  c.pBtn = h('button', {onclick: () => send(c,'p',{op:'set_power',uuid:g.uuid,watts:+c.pS.n.value}, c.pMsg, 'Power limit applied.')}, 'Apply');
+  c.pPanel = h('div', {class:'gt-panel'}, h('h4', {}, 'Power limit'),
+    h('div', {class:'gt-row'}, c.pS.r, c.pS.n, h('span', {}, 'W'), c.pBtn), c.pPre, c.pMsg);
+
+  c.fMode = h('select', {onchange: () => { dirty('f')(); fanVis(c); }},
+    h('option',{value:'auto'},'Driver default'), h('option',{value:'curve'},'Curve'), h('option',{value:'manual'},'Fixed speed'));
   c.fCurve = h('select', {onchange: dirty('f')});
-  c.fPct = h('input', {type:'number', step:1, max:100, oninput: dirty('f')});
-  c.fMsg = h('span', {class:'gt-msg'}); c.fInfo = h('span', {class:'gt-msg'});
+  c.fS = slider(0, 100, 1, dirty('f'));
+  c.fCurveRow = h('div', {class:'gt-row'}, h('span', {}, 'Curve'), c.fCurve);
+  c.fManualRow = h('div', {class:'gt-row'}, c.fS.r, c.fS.n, h('span', {}, '%'));
+  c.fMsg = h('div', {class:'gt-msg'}); c.fInfo = h('div', {class:'gt-sub'});
   c.fBtn = h('button', {onclick: () => {
     const st = c.st.settings.fan, presets = c.stAll.curve_presets || {};
     const curve = presets[c.fCurve.value] ? presets[c.fCurve.value].curve : st.curve;
-    send(c,'f',{op:'set_fan',uuid:g.uuid,mode:c.fMode.value,curve,manual_pct:+c.fPct.value||st.manual_pct}, c.fMsg, 'Fan setting applied.');
+    send(c,'f',{op:'set_fan',uuid:g.uuid,mode:c.fMode.value,curve,manual_pct:+c.fS.n.value||st.manual_pct}, c.fMsg, 'Fan setting applied.');
   }}, 'Apply');
-  c.fRow = h('div', {class:'gt-grp'}, h('label',{},'Fan'), c.fMode, c.fCurve, c.fPct, h('span',{},'%'), c.fBtn, c.fInfo, c.fMsg);
+  c.fPanel = h('div', {class:'gt-panel'}, h('h4', {}, 'Fan'),
+    h('div', {class:'gt-row'}, c.fMode, c.fBtn), c.fCurveRow, c.fManualRow, c.fInfo, c.fMsg);
 
-  c.cIn = h('input', {type:'number', step:15, oninput: dirty('c')}); c.cOff = h('input', {type:'checkbox', onchange: dirty('c')});
-  c.cMsg = h('span', {class:'gt-msg'});
-  c.cBtn = h('button', {onclick: () => send(c,'c',{op:'set_clock_cap',uuid:g.uuid,mhz:c.cOff.checked?null:+c.cIn.value}, c.cMsg, 'Clock cap applied.')}, 'Apply');
-  c.cRow = h('div', {class:'gt-grp'}, h('label',{},'Core clock cap (MHz)'), c.cIn, h('label',{style:'min-width:0;font-weight:normal'}, c.cOff, ' no cap'), c.cBtn, c.cMsg);
+  c.cOff = h('input', {type:'checkbox', id:'cap-' + g.index, onchange: () => { dirty('c')(); c.cS.n.disabled = c.cS.r.disabled = c.cOff.checked; }});
+  c.cS = slider(0, 0, 15, dirty('c')); c.cMsg = h('div', {class:'gt-msg'});
+  c.cBtn = h('button', {onclick: () => send(c,'c',{op:'set_clock_cap',uuid:g.uuid,mhz:c.cOff.checked?null:+c.cS.n.value}, c.cMsg, 'Clock cap applied.')}, 'Apply');
+  c.cPanel = h('div', {class:'gt-panel'}, h('h4', {}, 'Core clock cap'),
+    h('div', {class:'gt-row'}, c.cS.r, c.cS.n, h('span', {}, 'MHz'), c.cBtn),
+    h('div', {class:'gt-row'}, c.cOff, h('label', {for:'cap-' + g.index}, 'No cap')), c.cMsg);
 
   c.rMsg = h('span', {class:'gt-msg'});
   c.rBtn = h('button', {onclick: () => { if (confirm('Reset fan curve, clock cap and power limit to safe defaults?')) send(c,'r',{op:'baseline',uuid:g.uuid}, c.rMsg, 'Reset to defaults.'); }}, 'Reset to defaults');
-  c.rRow = h('div', {class:'gt-grp'}, c.rBtn, c.rMsg);
+  c.foot = h('div', {class:'gt-foot'}, c.rBtn, c.rMsg);
 
-  c.el = h('div', {class:'gt-card'}, c.title, c.live, c.pRow, c.fRow, c.cRow, c.rRow);
+  c.panels = h('div', {class:'gt-panels'}, c.pPanel, c.fPanel, c.cPanel);
+  c.el = h('div', {class:'gt-card'}, h('div', {class:'gt-head'}, c.title, c.sub), tl, c.throttle, c.panels, c.foot);
   return c;
+}
+
+function fanVis(c){
+  c.fCurveRow.hidden = c.fMode.value !== 'curve';
+  c.fManualRow.hidden = c.fMode.value !== 'manual';
 }
 
 function fillStatic(c, st, all){
   const g = c.g;
   c.st = st; c.stAll = all;
   const locked = !!all.preview || st.settings.fan.mode === 'unmanaged';
-  c.pRow.hidden = !st.power_range;
+
+  c.pPanel.hidden = !st.power_range;
   if (st.power_range) {
-    c.pIn.min = st.power_range[0]; c.pIn.max = st.power_range[1];
-    if (!c.dirty.p && st.settings.power_w != null) c.pIn.value = st.settings.power_w;
+    c.pS.limits(st.power_range[0], st.power_range[1]);
+    if (!c.dirty.p && st.settings.power_w != null) c.pS.set(st.settings.power_w);
     c.pPre.replaceChildren(...((st.profile && st.profile.power_presets) || []).map(p =>
-      h('button', {title: p.note||'', onclick: () => { c.pIn.value = p.w; c.dirty.p = true; }}, p.label || (p.w + ' W'))));
-    c.pPre.append(h('span',{class:'gt-msg'}, ` range ${st.power_range[0]}-${st.power_range[1]} W`));
+      h('button', {title: p.note||'', onclick: () => { c.pS.set(p.w); c.dirty.p = true; }}, p.label || (p.w + ' W'))),
+      h('span', {class:'gt-sub'}, `range ${st.power_range[0]}-${st.power_range[1]} W`));
   }
-  c.fRow.hidden = !g.nfans;
+
+  c.fPanel.hidden = !g.nfans;
   if (g.nfans) {
     const f = st.settings.fan, presets = all.curve_presets || {};
     c.fCurve.replaceChildren(h('option',{value:''},'Current curve'), ...Object.entries(presets)
       .filter(([,p]) => p.curve[p.curve.length-1][0] <= st.full_by_c).map(([k,p]) => h('option',{value:k,title:p.note||''}, p.label)));
-    if (!c.dirty.f) { c.fMode.value = f.mode === 'unmanaged' ? 'auto' : f.mode; c.fPct.value = f.manual_pct; }
-    c.fPct.min = st.fan_min;
-    c.fInfo.textContent = st.fan && st.fan.floor_active ? 'safety floor active' : (st.fan && st.fan.fault ? 'fault: ' + st.fan.fault : '');
+    c.fS.limits(st.fan_min, 100);
+    if (!c.dirty.f) { c.fMode.value = f.mode === 'unmanaged' ? 'auto' : f.mode; c.fS.set(f.manual_pct); }
+    fanVis(c);
+    c.fInfo.textContent = st.fan && st.fan.floor_active ? 'Safety floor active: the card is hot, the fan is above your setting.' : (st.fan && st.fan.fault ? 'Fault: ' + st.fan.fault : '');
   }
-  c.cRow.hidden = !st.clock_range;
+
+  c.cPanel.hidden = !st.clock_range;
   if (st.clock_range) {
-    c.cIn.min = st.clock_range[0]; c.cIn.max = st.clock_range[1];
-    if (!c.dirty.c) { c.cOff.checked = st.settings.clock_cap_mhz == null; c.cIn.value = st.settings.clock_cap_mhz ?? st.clock_range[1]; }
+    c.cS.limits(st.clock_range[0], st.clock_range[1]);
+    if (!c.dirty.c) {
+      c.cOff.checked = st.settings.clock_cap_mhz == null;
+      c.cS.set(st.settings.clock_cap_mhz ?? st.clock_range[1]);
+      c.cS.n.disabled = c.cS.r.disabled = c.cOff.checked;
+    }
   }
-  c.rRow.hidden = locked;
-  for (const el of c.el.querySelectorAll('button,input,select')) el.disabled = locked;
+
+  c.panels.hidden = c.pPanel.hidden && c.fPanel.hidden && c.cPanel.hidden;
+  c.foot.hidden = locked;
+  for (const el of c.panels.querySelectorAll('button,input,select')) if (locked) el.disabled = true;
 }
 
 function fillLive(c, s){
   s = s || {};
-  const fans = (s.fans || []).filter(x => x != null), L = c.liveEls;
-  L.Temp.textContent = num(s.temp) + ' °C';
-  L.Fan.textContent = fans.length ? num(Math.max(...fans)) + ' %' : '-';
-  L.Power.textContent = num(s.power_w) + ' / ' + num(s.power_limit_w) + ' W';
-  L.Core.textContent = num(s.clock_mhz) + ' MHz';
-  L.Util.textContent = num(s.util) + ' %';
-  L.VRAM.textContent = num(s.vram_used_mib) + ' / ' + num(s.vram_total_mib) + ' MiB';
-  L.Limits.textContent = (s.reasons && s.reasons.length) ? s.reasons.join(', ') : 'none';
+  const fans = (s.fans || []).filter(x => x != null), T = c.tiles;
+  const setT = (k, text, p) => { T[k].val.textContent = text; T[k].fill.style.width = p + '%'; };
+  setT('Temperature', num(s.temp) + ' °C', pct(s.temp, 100));
+  T.Temperature.val.className = s.temp >= 85 ? 'bad' : s.temp >= 75 ? 'warn' : '';
+  const fan = fans.length ? Math.max(...fans) : null;
+  setT('Fan', fan == null ? '-' : num(fan) + ' %', fan || 0);
+  setT('Power', num(s.power_w) + ' W', pct(s.power_w, s.power_limit_w));
+  setT('Core clock', num(s.clock_mhz) + ' MHz', pct(s.clock_mhz, c.g.clock_max_mhz));
+  setT('Utilization', num(s.util) + ' %', s.util || 0);
+  setT('VRAM', num(s.vram_used_mib / 1024, 1) + ' GB', pct(s.vram_used_mib, s.vram_total_mib));
+  c.throttle.textContent = (s.reasons && s.reasons.length) ? 'Clock limited by: ' + s.reasons.join(', ') : '';
+  c.sub.textContent = [c.g.pci, s.pstate != null ? 'P' + s.pstate : null, s.power_limit_w != null ? 'limit ' + num(s.power_limit_w) + ' W' : null].filter(Boolean).join(' · ');
 }
 
 function applyStatus(st){
@@ -177,16 +255,16 @@ function applyStatus(st){
 function renderTop(st, extraWarning){
   if (!topEl) { topEl = h('div'); top.append(topEl); }
   const kids = [];
-  for (const w of [...(st.warnings || []), ...(extraWarning ? [extraWarning] : [])]) kids.push(h('div', {class:'gt-warn'}, w));
-  if (st.preview) kids.push(h('div', {class:'gt-warn'}, 'Monitor only: the control daemon is not reachable, controls are locked.'));
+  for (const w of [...(st.warnings || []), ...(extraWarning ? [extraWarning] : [])]) kids.push(h('div', {class:'gt-note'}, w));
+  if (st.preview) kids.push(h('div', {class:'gt-note'}, 'Monitor only: the control daemon is not reachable, controls are locked.'));
   else if (st.power_settable) {
     const inp = h('input', {type:'number', step:1, value: st.budget_w ?? '', placeholder:'none'}), msg = h('span', {class:'gt-msg'});
     const btn = h('button', {onclick: () => {
       say(msg, 'Applying...');
-      call({op:'apply', req: JSON.stringify({op:'set_budget', watts:+inp.value})}).done(r => r.ok ? (say(msg,'Budget applied.'), applyStatus(r)) : say(msg, r.error||'Failed', true));
+      call({op:'apply', req: JSON.stringify({op:'set_budget', watts:+inp.value})}).done(r => r.ok ? (say(msg,'Budget applied.','ok'), applyStatus(r)) : say(msg, r.error||'Failed', 'err'));
     }}, 'Apply');
-    kids.push(h('div', {class:'gt-grp'}, h('label',{},'Combined power budget (W)'), inp, btn,
-      h('span',{class:'gt-msg'}, `in use: ${st.budget_used_w ?? '-'} W`), msg));
+    kids.push(h('div', {class:'gt-sum'}, h('b', {}, `Total GPU power: ${num(st.budget_used_w)} W`),
+      h('span', {class:'gt-grow'}), h('label', {}, 'Combined budget'), inp, h('span', {}, 'W'), btn, msg));
   }
   topEl.replaceChildren(...kids);
 }
